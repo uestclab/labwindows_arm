@@ -1,0 +1,25 @@
+{
+	"stat": "0", 
+	"dst": "gpio",
+    "op_cmd": [ 
+		{
+			"name": "lmx2572_lock",
+			"id": "0x1",
+			"intr": "0x0",
+			"gpio_no": "0x3db",
+			"dir": "0",
+			"sleep": "1"
+		}
+		{
+
+		}
+	],
+
+	"return":[
+		{
+			"reg": "0x3db",
+			"ret": "0x0",
+			"mask": "0xffffffff"
+		}
+	]
+}
