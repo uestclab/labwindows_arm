@@ -81,10 +81,10 @@ void processMessage(const char* buf, int32_t length,int connfd){ // later use th
     cJSON * item = NULL;
     root = cJSON_Parse(jsonfile);
     item = cJSON_GetObjectItem(root,"dst");
-	cJSON_Delete(root);
 	printf("dst = %s\n",item->valuestring);
 	
 	sendCjson(connfd,jsonfile,length);
+	cJSON_Delete(root);
 	return;
 	ret = dev_transfer(jsonfile, strlen(jsonfile)+1, &stat_buf, &stat_buf_len, item->valuestring, -1); // block func
 	if(ret == 0){

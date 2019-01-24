@@ -7,8 +7,6 @@
 #include <pthread.h>
 #include "cJSON.h"
 
-#define RECEIVE_BUFFER 1000 * 40
-
 
 pthread_t* initNet(int *fd);
 
