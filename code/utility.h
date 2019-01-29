@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <sys/time.h>
 
 typedef struct shareBufInfo{
     char*       buf_;
@@ -24,6 +25,8 @@ void destoryThreadPara(para_thread* para_t);
 int32_t myNtohl(const char* buf);
 int filelength(FILE *fp);
 char* readfile(const char *path);
+int64_t now();
+
 void user_wait();
 void delay();
 void stop();

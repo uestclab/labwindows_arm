@@ -8,6 +8,7 @@
 #include "procBroker.h"
 #include "utility.h"
 #include "process.h"
+#include "csiLoopMain.h"
 
 /*---------------------------------------------------------------------------*/
 /*  main thread , receive socket thread , broker thread inform callback 	 */
@@ -45,7 +46,7 @@ int main(int argc,char** argv)
 	int connfd = -1;
 	pthread_t* receive_pid = NULL;
 	//int ret = initProcBroker(argv[0],&connfd);
-
+	csiLoopMain(&connfd);
 	receive_pid= initNet(&connfd);
 
 	pthread_join(*receive_pid, NULL);

@@ -12,15 +12,15 @@
 #include "broker.h"
 #include "cJSON.h"
 #include "utility.h"
+#include "csiLoopMain.h"
 
 #define BUFFER_SIZE 2560*4
 #define SEND_HEADROOM 8
 // temp
-int test_conn = 0;
-int flag = 0;
-//char* file_buf = NULL;
+
 
 // --------------
+
 int receive_running = 0;
 
 int	 gMoreData_ = 0;
@@ -36,7 +36,6 @@ void initHandlePcProcess(){
 	gSendMessage = (char*)malloc(BUFFER_SIZE);
 
 	para_t = newThreadPara();
-
 }
 
 void freeHandlePcProcess(){
@@ -50,12 +49,13 @@ void freeHandlePcProcess(){
 		free(gSendMessage);
 		gSendMessage = NULL;
 	}
+	gMoreData_ = 0;
+	receive_running = 0;
 }
 
 
 // prepare buf only for CSI 
 int sendCSI(int connfd, void* csi_buf, int buf_len){
-	// add frame header and type(int or cjson) in csi_buf headroom 
 
 	// then call sendToPc
 }
@@ -93,12 +93,6 @@ void processMessage(const char* buf, int32_t length,int connfd){ // later use th
 	printf("dst = %s , type = %d \n",item->valuestring,type);
 	
 	cJSON_Delete(root);
-	if(flag == 0){
-		flag = 1;
-		pthread_t send_thread_pid;
-		int ret_temp = pthread_create(&send_thread_pid, NULL, test_send, NULL);
-		return;
-	}
 	
 	//ret = dev_transfer(jsonfile, strlen(jsonfile)+1, &stat_buf, &stat_buf_len, item->valuestring, -1); // block func
 	if(ret == 0){
@@ -173,21 +167,20 @@ receive_thread(void* args){
     while(receive_running == 1){
     	receive(connfd);
     }
-	//close(connfd);
+	freeHandlePcProcess();
     printf("Exit receive_thread()\n");
 
 }
 
+
+/* ---------------------------  external interface  ------------------------------------- */
+
 void receive_signal(){
-	printf("receive_signal\n");
 	receive_running = 0;
-	close(test_conn);
 	printf("end_receive_signal\n");
 	exit(0);
 }
 
-
-/* ---------------------------  external interface  ------------------------------------- */
 
 pthread_t* initNet(int *fd){
 	int connfd = -1;
@@ -228,11 +221,11 @@ pthread_t* initNet(int *fd){
 			printf("accept new client , connfd = %d \n", connfd);
 
 			initHandlePcProcess();
+			startLoop();
 			// new thread to handle this socket
 			receive_running = 1;
 			int ret = pthread_create(para_t->thread_pid, NULL, receive_thread, (void*)(fd));
 			*fd = connfd;
-			test_conn = connfd; // test
 			//return para_t->thread_pid;
 		}
 	}
@@ -251,45 +244,6 @@ int sendToPc(int connfd, char* send_buf, int send_buf_len){
 
 
 /* ---------------------------------------------------------------- */
-void* test_send(void* args){
-	//int connfd = *((int*)args);
-	const char* file_path = "/home/gyl/liqingSpace/code/labwindows/labwindows_arm/code/cst_upload_to_arm.dat";
-	char* file_buf = readfile(file_path);
-	int length = strlen(file_buf);
 
-	printf("length = %d\n",length);
-
-	char rssi[2560] = {'a'};
-
-	int send_num = 10003;
-	int error = 0;
-	int counter = 0;
-	
-	int messageLen = length + 4 + 4;
-	
-	while(send_num--){
-		if(send_num == 3500 || send_num == 1900 || send_num == 8888){
-			*((int32_t*)gSendMessage) = (2560 + 4);
-			*((int32_t*)(gSendMessage+ sizeof(int32_t))) = (1); // 1--rssi , 2--CSI , 3--json
-			memcpy(gSendMessage+SEND_HEADROOM,rssi,2560);
-			messageLen = 2560 + 4 + 4;
-			printf("send rssi \n");
-		}else{
-			*((int32_t*)gSendMessage) = (length + 4);
-			*((int32_t*)(gSendMessage+ sizeof(int32_t))) = (2); // 1--rssi , 2--CSI , 3--json
-			memcpy(gSendMessage+SEND_HEADROOM,file_buf,length);
-			messageLen = length + 4 + 4;
-		}
-		int ret = sendToPc(test_conn, gSendMessage, messageLen);
-		counter = counter + 1;
-		if(counter == 5){
-			counter = 0;		
-			//user_wait();
-		}
-		//delay();
-	}
-	printf("test_send() end \n");
-	flag = 0;	
-}
 
 

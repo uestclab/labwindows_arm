@@ -60,6 +60,23 @@ char* readfile(const char *path)
 	return ch;
 }
 
+
+//	===========================
+	/*	
+	int64_t start = now();
+	.....
+	int64_t end = now();
+	double sec = (end-start)/1000000.0;
+	printf("%f sec %f ms \n", sec, 1000*sec);
+	*/
+//  ===========================
+int64_t now()
+{
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  return tv.tv_sec * 1000000 + tv.tv_usec;
+}
+
 void user_wait()
 {
 	int c;

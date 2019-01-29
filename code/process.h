@@ -12,8 +12,6 @@ pthread_t* initNet(int *fd);
 
 int sendToPc(int connfd, char* send_buf, int send_buf_len);
 
-void* test_send(void* args);
-
 void receive_signal();
 
 #endif//PROCESS_H
