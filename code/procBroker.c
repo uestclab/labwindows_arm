@@ -58,7 +58,7 @@ int initProcBroker(char *argv,int* fd){
 	printf("get_prog_name(argv) = %s , ret = %d \n",get_prog_name(argv),ret);
 	
 	ret = register_callback("all", NULL, "event"); //	
-	ret = register_callback("all", receive_rssi, "rssi");
+	ret = register_callback("all", receive_rssi, "rssi"); // subscriber rssi topic
 
 	//rssi_t = newThreadPara();
 

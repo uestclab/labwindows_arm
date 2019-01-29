@@ -1,9 +1,10 @@
-#include<stdio.h>
-#include<stdlib.h>
-#include<string.h>
-#include<errno.h>
-#include<sys/types.h>
-#include<unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <signal.h>
 #include "procBroker.h"
 #include "utility.h"
 #include "process.h"
@@ -16,18 +17,41 @@
 /*                                                                           */
 /*---------------------------------------------------------------------------*/
 
+/*---------------------------------------------------------------------------*/
+/*  change version : 1. 	//return ntohl(be32); return be32;               */
+/*---------------------------------------------------------------------------*/
+
+
+static void process_signal(int signal)
+{
+    switch(signal) {  
+		case SIGINT: 
+			receive_signal();
+			break;
+		default: 
+		    break;
+    }
+}
+
+
 
 int main(int argc,char** argv)
 {
+
+	if( SIG_ERR == signal(SIGINT, process_signal) ){
+		
+	}
+
 	int connfd = -1;
-	int ret = initProcBroker(argv[0],&connfd);
-	pthread_t* receive_pid= initNet(&connfd);
+	pthread_t* receive_pid = NULL;
+	//int ret = initProcBroker(argv[0],&connfd);
+
+	receive_pid= initNet(&connfd);
 
 	pthread_join(*receive_pid, NULL);
 	printf("end_2\n");
-	while(1){
 
-	}
+	printf("end main\n");
     return 0;
 }
 

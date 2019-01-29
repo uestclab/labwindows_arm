@@ -16,10 +16,12 @@
 #define BUFFER_SIZE 2560*4
 #define SEND_HEADROOM 8
 // temp
-
-char* file_buf = NULL;
+int test_conn = 0;
+int flag = 0;
+//char* file_buf = NULL;
 
 // --------------
+int receive_running = 0;
 
 int	 gMoreData_ = 0;
 char* gReceBuffer_ = NULL;
@@ -30,7 +32,6 @@ para_thread* para_t = NULL;
 int listenfd;
 
 void initHandlePcProcess(){
-	file_buf = "server send";
 	gReceBuffer_ = (char*)malloc(BUFFER_SIZE);
 	gSendMessage = (char*)malloc(BUFFER_SIZE);
 
@@ -62,18 +63,26 @@ int sendCSI(int connfd, void* csi_buf, int buf_len){
 void sendCjson(int connfd, char* stat_buf, int stat_buf_len){
 	int length = stat_buf_len + 4 + 4;
 	char* temp_buf = malloc(length);
-	*((int32_t*)temp_buf) = htonl(stat_buf_len + sizeof(int32_t));
-	*((int32_t*)(temp_buf+ sizeof(int32_t))) = htonl(3); // 1--rssi , 2--CSI , 3--json
+	//*((int32_t*)temp_buf) = htonl(stat_buf_len + sizeof(int32_t));
+	//*((int32_t*)(temp_buf+ sizeof(int32_t))) = htonl(3); // 1--rssi , 2--CSI , 3--json
+	*((int32_t*)temp_buf) = (stat_buf_len + sizeof(int32_t));
+	*((int32_t*)(temp_buf+ sizeof(int32_t))) = (3); // 1--rssi , 2--CSI , 3--json
 	memcpy(temp_buf + SEND_HEADROOM,stat_buf,stat_buf_len);
+	//printf("send length = %d \n",length);
 	int ret = sendToPc(connfd, temp_buf, length);
 	free(temp_buf);
 }
 
+// ========= transfer json to broker and wait for response
 void processMessage(const char* buf, int32_t length,int connfd){ // later use thread pool
-	// transfer json to broker and wait for response
 	printf("processMessage()\n");
-	char* jsonfile = buf + sizeof(int32_t);
-	printf("receive : %s\n",jsonfile);
+	int type = myNtohl(buf + 4);
+	char* jsonfile = buf + sizeof(int32_t) + sizeof(int32_t);
+	if(type == 5){
+		printf("receive : %s\n",jsonfile);
+		receive_running = 0;
+		return;
+	}
 	char* stat_buf;
 	int stat_buf_len;
 	int ret;
@@ -81,19 +90,24 @@ void processMessage(const char* buf, int32_t length,int connfd){ // later use th
     cJSON * item = NULL;
     root = cJSON_Parse(jsonfile);
     item = cJSON_GetObjectItem(root,"dst");
-	printf("dst = %s\n",item->valuestring);
+	printf("dst = %s , type = %d \n",item->valuestring,type);
 	
-	sendCjson(connfd,jsonfile,length);
 	cJSON_Delete(root);
-	return;
-	ret = dev_transfer(jsonfile, strlen(jsonfile)+1, &stat_buf, &stat_buf_len, item->valuestring, -1); // block func
+	if(flag == 0){
+		flag = 1;
+		pthread_t send_thread_pid;
+		int ret_temp = pthread_create(&send_thread_pid, NULL, test_send, NULL);
+		return;
+	}
+	
+	//ret = dev_transfer(jsonfile, strlen(jsonfile)+1, &stat_buf, &stat_buf_len, item->valuestring, -1); // block func
 	if(ret == 0){
-		// call thread safe func sendToPc
-		sendCjson(connfd,stat_buf,stat_buf_len+1);
+		sendCjson(connfd,jsonfile,length);
+		//sendCjson(connfd,stat_buf,stat_buf_len+1);
 	}
 }
 
-void receive(int connfd){ // receive -- | messageLength(4 Byte) | json file(messageLength) | 
+void receive(int connfd){ // receive -- | messageLength(4 Byte) | type(4 Byte) | json file(messageLength - 4) | 
     int n;
     int size = 0;
     int totalByte = 0;
@@ -106,14 +120,12 @@ void receive(int connfd){ // receive -- | messageLength(4 Byte) | json file(mess
     if(n<=0){
 		return;
     }
-	printf("receive : %s\n",temp_receBuffer);
     size = n;
 	
     pStart = temp_receBuffer - gMoreData_;
     totalByte = size + gMoreData_;
-    printf("receive : totalByte = %d , size = %d \n", totalByte,size);
     const int MinHeaderLen = sizeof(int32_t);
-
+	printf("totalByte = %d \n",totalByte); 
     while(1){
         if(totalByte <= MinHeaderLen)
         {
@@ -158,14 +170,21 @@ void *
 receive_thread(void* args){
 	printf("receive_thread()\n");
 	int connfd = *((int*)args);
-    while(1){
+    while(receive_running == 1){
     	receive(connfd);
     }
-	close(connfd);
-    printf("Exit receive_thread()");
+	//close(connfd);
+    printf("Exit receive_thread()\n");
 
 }
 
+void receive_signal(){
+	printf("receive_signal\n");
+	receive_running = 0;
+	close(test_conn);
+	printf("end_receive_signal\n");
+	exit(0);
+}
 
 
 /* ---------------------------  external interface  ------------------------------------- */
@@ -202,16 +221,20 @@ pthread_t* initNet(int *fd){
  
     printf("========waiting for client's request========\n");
 
-    if( (connfd = accept(listenfd,(struct sockaddr*)NULL,NULL)) == -1 ){
-        printf("accept socket error: %s(errno: %d)\n",strerror(errno),errno);
-    }else{
-		printf("accept new client\n");
-		//
-		initHandlePcProcess();
-		// new thread to handle this socket
-		int ret = pthread_create(para_t->thread_pid, NULL, receive_thread, (void*)(fd));
-		*fd = connfd;
-		return para_t->thread_pid;
+	while(1){
+		if( (connfd = accept(listenfd,(struct sockaddr*)NULL,NULL)) == -1 ){
+		    printf("accept socket error: %s(errno: %d)\n",strerror(errno),errno);
+		}else{
+			printf("accept new client , connfd = %d \n", connfd);
+
+			initHandlePcProcess();
+			// new thread to handle this socket
+			receive_running = 1;
+			int ret = pthread_create(para_t->thread_pid, NULL, receive_thread, (void*)(fd));
+			*fd = connfd;
+			test_conn = connfd; // test
+			//return para_t->thread_pid;
+		}
 	}
 	return NULL;
 }
@@ -229,33 +252,44 @@ int sendToPc(int connfd, char* send_buf, int send_buf_len){
 
 /* ---------------------------------------------------------------- */
 void* test_send(void* args){
+	//int connfd = *((int*)args);
+	const char* file_path = "/home/gyl/liqingSpace/code/labwindows/labwindows_arm/code/cst_upload_to_arm.dat";
+	char* file_buf = readfile(file_path);
 	int length = strlen(file_buf);
+
 	printf("length = %d\n",length);
 
-	int send_num = 20000;
+	char rssi[2560] = {'a'};
+
+	int send_num = 10003;
 	int error = 0;
 	int counter = 0;
-	printf("press...");
 	
+	int messageLen = length + 4 + 4;
 	
 	while(send_num--){
-		//*((int32_t*)gSendMessage) = htonl(length);
-		int messageLen = length + 4;
-		memcpy(gSendMessage,&messageLen,4);
-		memcpy(gSendMessage+4,&send_num,4);
-		memcpy(gSendMessage+8,file_buf,length);
-		// send
+		if(send_num == 3500 || send_num == 1900 || send_num == 8888){
+			*((int32_t*)gSendMessage) = (2560 + 4);
+			*((int32_t*)(gSendMessage+ sizeof(int32_t))) = (1); // 1--rssi , 2--CSI , 3--json
+			memcpy(gSendMessage+SEND_HEADROOM,rssi,2560);
+			messageLen = 2560 + 4 + 4;
+			printf("send rssi \n");
+		}else{
+			*((int32_t*)gSendMessage) = (length + 4);
+			*((int32_t*)(gSendMessage+ sizeof(int32_t))) = (2); // 1--rssi , 2--CSI , 3--json
+			memcpy(gSendMessage+SEND_HEADROOM,file_buf,length);
+			messageLen = length + 4 + 4;
+		}
+		int ret = sendToPc(test_conn, gSendMessage, messageLen);
 		counter = counter + 1;
 		if(counter == 5){
 			counter = 0;		
 			//user_wait();
 		}
-		delay();
+		//delay();
 	}
-	printf("test_send() end \n");	
+	printf("test_send() end \n");
+	flag = 0;	
 }
-
-
-
 
 

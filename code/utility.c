@@ -30,7 +30,8 @@ void destoryThreadPara(para_thread* para_t){
 int32_t myNtohl(const char* buf){
 	int32_t be32 = 0;
 	memcpy(&be32, buf, sizeof(be32));
-	return ntohl(be32);
+	//return ntohl(be32);
+	return be32;
 }
 
 int filelength(FILE *fp)
