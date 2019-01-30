@@ -8,6 +8,7 @@ int csiLoopMain(int *fd);
 
 void startLoop();
 
+void send_csi(char* buf, int buf_len);
 
 
 

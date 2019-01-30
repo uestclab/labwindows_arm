@@ -30,6 +30,7 @@ char* gSendMessage = NULL;
 para_thread* para_t = NULL;
 
 int listenfd;
+extern int gLinkfd = 0;
 
 void initHandlePcProcess(){
 	gReceBuffer_ = (char*)malloc(BUFFER_SIZE);
@@ -219,13 +220,13 @@ pthread_t* initNet(int *fd){
 		    printf("accept socket error: %s(errno: %d)\n",strerror(errno),errno);
 		}else{
 			printf("accept new client , connfd = %d \n", connfd);
-
+			*fd = connfd;
+			gLinkfd = connfd;
 			initHandlePcProcess();
 			startLoop();
 			// new thread to handle this socket
 			receive_running = 1;
 			int ret = pthread_create(para_t->thread_pid, NULL, receive_thread, (void*)(fd));
-			*fd = connfd;
 			//return para_t->thread_pid;
 		}
 	}
@@ -236,7 +237,7 @@ pthread_t* initNet(int *fd){
 /* ---------------------------------------------------------------- */
 int sendToPc(int connfd, char* send_buf, int send_buf_len){
 	pthread_mutex_lock(para_t->mutex_);
-	int ret = send(connfd,send_buf,send_buf_len,0);
+	int ret = send(gLinkfd,send_buf,send_buf_len,0);
 	pthread_mutex_unlock(para_t->mutex_);
 	return ret;
 }

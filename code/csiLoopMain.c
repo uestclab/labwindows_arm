@@ -9,7 +9,7 @@ para_thread* send_t = NULL;
 char* gCsiMessage = NULL;
 int Loop = 0;
 int stop_t = 0;
-
+//extern int gLinkfd;
 // test
 const char* file_path = NULL;
 char* file_buf = NULL;
@@ -25,7 +25,7 @@ void test_init(){
 
 void test(int fd){
 	char rssi[2560] = {'a'};
-	int send_num = 1000;
+	int send_num = 100003;
 	int error = 0;
 	int counter = 0;
 	
@@ -37,18 +37,11 @@ void test(int fd){
 			*((int32_t*)(gCsiMessage+ sizeof(int32_t))) = (1); // 1--rssi , 2--CSI , 3--json
 			memcpy(gCsiMessage+HEADROOM,rssi,2560);
 			messageLen = 2560 + 4 + 4;
+			int ret = sendToPc(fd, gCsiMessage, messageLen);
 			printf("send rssi \n");
-		}else{
-			*((int32_t*)gCsiMessage) = (length + 4);
-			*((int32_t*)(gCsiMessage+ sizeof(int32_t))) = (2); // 1--rssi , 2--CSI , 3--json
-			memcpy(gCsiMessage+HEADROOM,file_buf,length);
-			messageLen = length + 4 + 4;
+		}else{//file_buf
+			send_csi(file_buf,length);
 		}
-		int64_t start = now();
-		int ret = sendToPc(fd, gCsiMessage, messageLen);
-		int64_t end = now();
-		double sec = (end-start)/1000000.0;
-		printf("%f sec %f ms \n", sec, 1000*sec);
 		//delay();
 	}
 	printf("send csi end \n");
@@ -88,6 +81,31 @@ int csiLoopMain(int *fd){
 	return 0;
 }
 
+
+
+
+/* ========================================================================================== */
+
+
+
+
+void send_csi(char* buf, int buf_len){
+
+	int messageLen = buf_len + 4 + 4;
+	*((int32_t*)gCsiMessage) = (buf_len + 4);
+	*((int32_t*)(gCsiMessage+ sizeof(int32_t))) = (2); // 1--rssi , 2--CSI , 3--json
+	memcpy(gCsiMessage+HEADROOM,buf,buf_len);
+
+	int ret = sendToPc(-1, gCsiMessage, messageLen);
+
+}
+
+
+int recv_callback(char* buf, int buf_len, void* arg) // step 4 : copy and transfer to my own buffer
+{
+	send_csi(buf,buf_len);
+	return 0;
+}
 
 
 
