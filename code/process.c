@@ -8,10 +8,10 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include "process.h"
-//#include "broker.h"
 #include "cJSON.h"
 #include "utility.h"
 #include "csiLoopMain.h"
+//#include "stub.h"
 
 #define BUFFER_SIZE 2560*4
 #define SEND_HEADROOM 8
@@ -53,22 +53,13 @@ void freeHandlePcProcess(){
 	receive_running = 0;
 }
 
-
-// prepare buf only for CSI 
-int sendCSI(int connfd, void* csi_buf, int buf_len){
-
-	// then call sendToPc
-}
-
 void sendCjson(int connfd, char* stat_buf, int stat_buf_len){
 	int length = stat_buf_len + 4 + 4;
 	char* temp_buf = malloc(length);
-	//*((int32_t*)temp_buf) = htonl(stat_buf_len + sizeof(int32_t));
-	//*((int32_t*)(temp_buf+ sizeof(int32_t))) = htonl(3); // 1--rssi , 2--CSI , 3--json
+	// htonl ?
 	*((int32_t*)temp_buf) = (stat_buf_len + sizeof(int32_t));
 	*((int32_t*)(temp_buf+ sizeof(int32_t))) = (3); // 1--rssi , 2--CSI , 3--json
 	memcpy(temp_buf + SEND_HEADROOM,stat_buf,stat_buf_len);
-	//printf("send length = %d \n",length);
 	int ret = sendToPc(connfd, temp_buf, length);
 	free(temp_buf);
 }
@@ -100,10 +91,8 @@ void processMessage(const char* buf, int32_t length,int connfd){ // later use th
 	
 	cJSON_Delete(root);
 	
-	//ret = dev_transfer(jsonfile, strlen(jsonfile)+1, &stat_buf, &stat_buf_len, item->valuestring, -1); // block func
 	if(ret == 0){
 		sendCjson(connfd,jsonfile,length);
-		//sendCjson(connfd,stat_buf,stat_buf_len+1);
 	}
 }
 
@@ -181,7 +170,7 @@ receive_thread(void* args){
 
 /* ---------------------------  external interface  ------------------------------------- */
 
-void receive_signal(){
+void receive_signal(){ //  exit program if SIGINT
 	receive_running = 0;
 	printf("end_receive_signal\n");
 	exit(0);
@@ -227,11 +216,12 @@ pthread_t* initNet(int *fd){
 			printf("accept new client , connfd = %d \n", connfd);
 			*fd = connfd;
 			gLinkfd = connfd;
-			initHandlePcProcess();
-		
+			
+			initHandlePcProcess();		
 			receive_running = 1;
 			int ret = pthread_create(para_t->thread_pid, NULL, receive_thread, (void*)(fd));
 			initCstNet();
+			//startLoop(); // stub test
 		}
 	}
 	return NULL;

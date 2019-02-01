@@ -35,13 +35,13 @@ include_directories("${PROJECT_SOURCE_DIR}/dependence")
 include_directories("${PROJECT_SOURCE_DIR}/dependence/include")
 
 
-#SET(SOURCE_FILES devAdapter.c process.c procBroker.c utility.c)
 SET(SOURCE_FILES devAdapter.c process.c csiLoopMain.c utility.c)
+#SET(SOURCE_FILES devAdapter.c process.c stub.c utility.c)
+
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 target_link_libraries(${PROJECT_NAME} cjson)
-#target_link_libraries(${PROJECT_NAME} broker)
 target_link_libraries(${PROJECT_NAME} -pthread)
 target_link_libraries(${PROJECT_NAME} cst)
 

@@ -11,6 +11,7 @@ void *dev_lq = NULL;
 void send_csi(char* buf, int buf_len){
 
 	int messageLen = buf_len + 4 + 4;
+	// htonl ?
 	*((int32_t*)buf) = (buf_len + 4);
 	*((int32_t*)(buf+ sizeof(int32_t))) = (2); // 1--rssi , 2--CSI , 3--json
 	int ret = sendToPc(-1, buf, messageLen);
@@ -32,7 +33,7 @@ void* initCstNet(){
 	if(dev_lq == NULL)
 		printf("dev_lq == NULL axidma_open\n");
 	int rc = -99;
-	rc = axidma_register_callback(dev_lq, csi_callback, NULL); // step 3
+	rc = axidma_register_callback(dev_lq, csi_callback, NULL);
 	printf("rc = %d , initCstNet\n", rc);
 	startcsi(dev_lq);
 	return dev_lq;

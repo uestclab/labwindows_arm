@@ -5,10 +5,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <signal.h>
-#include "procBroker.h"
 #include "utility.h"
 #include "process.h"
 #include "csiLoopMain.h"
+//#include "stub.h"
 
 /*---------------------------------------------------------------------------*/
 /*  main thread , receive socket thread , broker thread inform callback 	 */
@@ -44,13 +44,10 @@ int main(int argc,char** argv)
 	}
 
 	int connfd = -1;
+	//stubMain(&connfd);
 	pthread_t* receive_pid = NULL;
-	//int ret = initProcBroker(argv[0],&connfd);
-	csiLoopMain(&connfd);
 	receive_pid= initNet(&connfd);
-
 	pthread_join(*receive_pid, NULL);
-	printf("end_2\n");
 
 	printf("end main\n");
     return 0;
