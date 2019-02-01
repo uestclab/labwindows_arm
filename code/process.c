@@ -8,8 +8,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include "process.h"
-#include "zlog.h"
-#include "broker.h"
+//#include "broker.h"
 #include "cJSON.h"
 #include "utility.h"
 #include "csiLoopMain.h"
@@ -30,7 +29,7 @@ char* gSendMessage = NULL;
 para_thread* para_t = NULL;
 
 int listenfd;
-extern int gLinkfd = 0;
+int gLinkfd = 0;
 
 void initHandlePcProcess(){
 	gReceBuffer_ = (char*)malloc(BUFFER_SIZE);
@@ -82,6 +81,12 @@ void processMessage(const char* buf, int32_t length,int connfd){ // later use th
 	if(type == 5){
 		printf("receive : %s\n",jsonfile);
 		receive_running = 0;
+		return;
+	}else if(type == 7){
+		//startcsi();
+		return;
+	}else if(type == 8){
+		stopcsi();
 		return;
 	}
 	char* stat_buf;
@@ -223,11 +228,10 @@ pthread_t* initNet(int *fd){
 			*fd = connfd;
 			gLinkfd = connfd;
 			initHandlePcProcess();
-			startLoop();
-			// new thread to handle this socket
+		
 			receive_running = 1;
 			int ret = pthread_create(para_t->thread_pid, NULL, receive_thread, (void*)(fd));
-			//return para_t->thread_pid;
+			initCstNet();
 		}
 	}
 	return NULL;

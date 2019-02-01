@@ -1,16 +1,13 @@
 #ifndef CSILOOPMAIN_H
 #define CSILOOPMAIN_H
 
-//#include "libaxidma.h"
+#include "cst_net.h"
 
 
-int csiLoopMain(int *fd);
+void* initCstNet();
 
-void startLoop();
-
-void send_csi(char* buf, int buf_len);
-
-
+void startcsi(void*);
+void stopcsi();
 
 
 
