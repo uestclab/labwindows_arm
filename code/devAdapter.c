@@ -7,8 +7,15 @@
 #include <signal.h>
 #include "utility.h"
 #include "process.h"
-#include "csiLoopMain.h"
-//#include "stub.h"
+
+#ifdef USE_STUB
+	#include "stub.h"
+#endif
+
+#ifndef USE_STUB
+	#include "csiLoopMain.h"
+#endif
+
 
 /*---------------------------------------------------------------------------*/
 /*  main thread , receive socket thread , broker thread inform callback 	 */
@@ -44,7 +51,10 @@ int main(int argc,char** argv)
 	}
 
 	int connfd = -1;
-	//stubMain(&connfd);
+#ifdef USE_STUB
+	printf("stubMain()\n");
+	stubMain(&connfd); // stub test
+#endif
 	pthread_t* receive_pid = NULL;
 	receive_pid= initNet(&connfd);
 	pthread_join(*receive_pid, NULL);

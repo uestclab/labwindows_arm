@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-option(PUBLIC "This is a default option for PUBLIC" ON)
+option(PUBLIC "This is a default option for PUBLIC" OFF)
 message(STATUS "build public platform switch: "${PUBLIC})
 project(devAdapter)
 
@@ -35,16 +35,20 @@ include_directories("${PROJECT_SOURCE_DIR}/dependence")
 include_directories("${PROJECT_SOURCE_DIR}/dependence/include")
 
 
-SET(SOURCE_FILES devAdapter.c process.c csiLoopMain.c utility.c)
-#SET(SOURCE_FILES devAdapter.c process.c stub.c utility.c)
-
+if(${PUBLIC} STREQUAL "ON") # cross complie
+	SET(SOURCE_FILES devAdapter.c process.c csiLoopMain.c utility.c)
+elseif(${PUBLIC} STREQUAL "OFF") # stub test on pc
+	add_definitions("-D USE_STUB")
+	SET(SOURCE_FILES devAdapter.c process.c stub.c utility.c)
+endif(${PUBLIC} STREQUAL "ON")
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 target_link_libraries(${PROJECT_NAME} cjson)
 target_link_libraries(${PROJECT_NAME} -pthread)
-target_link_libraries(${PROJECT_NAME} cst)
-
+if(${PUBLIC} STREQUAL "ON")
+	target_link_libraries(${PROJECT_NAME} cst)
+endif(${PUBLIC} STREQUAL "ON")
 
 
 

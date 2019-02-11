@@ -10,8 +10,14 @@
 #include "process.h"
 #include "cJSON.h"
 #include "utility.h"
-#include "csiLoopMain.h"
-//#include "stub.h"
+
+#ifdef USE_STUB
+	#include "stub.h"
+#endif
+
+#ifndef USE_STUB
+	#include "csiLoopMain.h"
+#endif
 
 #define BUFFER_SIZE 2560*4
 #define SEND_HEADROOM 8
@@ -114,7 +120,7 @@ void receive(int connfd){ // receive -- | messageLength(4 Byte) | type(4 Byte) |
     pStart = temp_receBuffer - gMoreData_;
     totalByte = size + gMoreData_;
     const int MinHeaderLen = sizeof(int32_t);
-	printf("totalByte = %d \n",totalByte); 
+	//printf("totalByte = %d \n",totalByte); 
     while(1){
         if(totalByte <= MinHeaderLen)
         {
@@ -129,7 +135,7 @@ void receive(int connfd){ // receive -- | messageLength(4 Byte) | type(4 Byte) |
         if(totalByte > MinHeaderLen)
         {
             messageLength= myNtohl(pStart);
-			printf("messageLength = %d, totalByte = %d \n",messageLength,totalByte);
+			//printf("messageLength = %d, totalByte = %d \n",messageLength,totalByte);
 	
             if(totalByte < messageLength + MinHeaderLen )
             {
@@ -221,7 +227,9 @@ pthread_t* initNet(int *fd){
 			receive_running = 1;
 			int ret = pthread_create(para_t->thread_pid, NULL, receive_thread, (void*)(fd));
 			initCstNet();
-			//startLoop(); // stub test
+#ifdef USE_STUB
+			startLoop(); // stub test
+#endif
 		}
 	}
 	return NULL;
