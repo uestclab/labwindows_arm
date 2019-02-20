@@ -36,7 +36,7 @@ include_directories("${PROJECT_SOURCE_DIR}/dependence/include")
 
 
 if(${PUBLIC} STREQUAL "ON") # cross complie
-	SET(SOURCE_FILES devAdapter.c process.c csiLoopMain.c utility.c)
+	SET(SOURCE_FILES devAdapter.c process.c csiLoopMain.c utility.c procBroker.c)
 elseif(${PUBLIC} STREQUAL "OFF") # stub test on pc
 	add_definitions("-D USE_STUB")
 	SET(SOURCE_FILES devAdapter.c process.c stub.c utility.c)
@@ -48,6 +48,8 @@ target_link_libraries(${PROJECT_NAME} cjson)
 target_link_libraries(${PROJECT_NAME} -pthread)
 if(${PUBLIC} STREQUAL "ON")
 	target_link_libraries(${PROJECT_NAME} cst)
+	target_link_libraries(${PROJECT_NAME} broker)
+	target_link_libraries(${PROJECT_NAME} mosquitto)
 endif(${PUBLIC} STREQUAL "ON")
 
 

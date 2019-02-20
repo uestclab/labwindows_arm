@@ -9,77 +9,68 @@
 #include "broker.h"
 #include "utility.h"
 #include "process.h"
+#include "cJSON.h"
 
-
-//para_thread* rssi_t = NULL;
-int resume = 0;
 shareBufInfo* shareInfo  = NULL;
 
 int *connect_fd = NULL;
 
 #define MAXSHAREBUF_SIZE 1024*10
-#define FRAME_HEADROOM 8
+#define HEADROOM 8
 
-void sendRssi(){
-	int length = shareInfo->len_ + sizeof(int32_t) + sizeof(int32_t);
-	*((int32_t*)(shareInfo->buf_)) = htonl(shareInfo->len_ + sizeof(int32_t));
-	*((int32_t*)(shareInfo->buf_+ sizeof(int32_t))) = htonl(1); // 1--rssi , 2--CSI , 3--json
-	
-	int ret = sendToPc(*connect_fd, shareInfo->buf_, length);
-	//resume = 0;
+void sendStateInquiry(int connfd, char* stat_buf, int stat_buf_len){
+	int length = stat_buf_len + 4 + 4;
+	char* temp_buf = malloc(length);
+	// htonl ?
+	*((int32_t*)temp_buf) = (stat_buf_len + sizeof(int32_t));
+	*((int32_t*)(temp_buf+ sizeof(int32_t))) = (31); // 1--rssi , 2--CSI , 3--json: 31 -- reg_json
+	memcpy(temp_buf + HEADROOM,stat_buf,stat_buf_len);
+	int ret = sendToPc(connfd, temp_buf, length);
+	free(temp_buf);
 }
-
-// callback from other thread ,can be block by myself , copy buffer to allocate memory then join threadPool
-int receive_rssi(char* buf, int buf_len, char *from, void* arg){ 
-	memcpy(shareInfo->buf_ + FRAME_HEADROOM,buf,buf_len);
-	shareInfo->len_ = buf_len;
-	sendRssi();
-	//resume = 1;
-	//pthread_cond_signal(rssi_t->cond_);
-}
-
-/*
-void * sendRssi_thread(void* args){
-	pthread_mutex_lock(rssi_t->mutex_);
-    while(1){
-		while (resume == 0)
-		{
-			pthread_cond_wait(rssi_t->cond_, rssi_t->mutex_);
-		}
-		pthread_mutex_unlock(rssi_t->mutex_);
-    	sendRssi();
-    }
-}
-*/
 
 int initProcBroker(char *argv,int* fd){
 
 	int ret = init_broker(get_prog_name(argv), NULL, -1, NULL, NULL);
 	printf("get_prog_name(argv) = %s , ret = %d \n",get_prog_name(argv),ret);
 	
-	ret = register_callback("all", NULL, "event"); //	
-	ret = register_callback("all", receive_rssi, "rssi"); // subscriber rssi topic
-
-	//rssi_t = newThreadPara();
-
-	//ret = pthread_create(rssi_t->thread_pid, NULL, sendRssi_thread, NULL);
 
 	shareInfo = (shareBufInfo*)malloc(sizeof(shareBufInfo));
 	shareInfo->buf_ = malloc(MAXSHAREBUF_SIZE);
+	shareInfo->len_ = 0;
 	connect_fd = fd;
 	
 	return 0;
-	
-	//return rssi_t->thread_pid;
 }
 
+int inquiry_state_from(char *buf, int buf_len){
+	int ret = -1;
+	char* stat_buf = NULL;
+	int stat_buf_len = 0;
+	cJSON * root = NULL;
+    cJSON * item = NULL;
+    root = cJSON_Parse(buf);
+    item = cJSON_GetObjectItem(root,"dst");
+	printf("dst = %s , \n",item->valuestring);
+	printf("buf_len = %d \n",buf_len);
+
+	ret = dev_transfer(buf, buf_len, &stat_buf, &stat_buf_len, item->valuestring, -1);
+
+	if(ret == 0 && stat_buf_len > 0 && connect_fd != NULL){
+		sendStateInquiry(*connect_fd,stat_buf,stat_buf_len+1);
+		printf("stat_buf = %s , stat_buf_len = %d \n", stat_buf, stat_buf_len);
+	}
+	printf("------------------------------\n");
+	cJSON_Delete(root);
+	return ret;
+}
+
+
 void destoryProcBroker(){
+	close_broker();
 	free(shareInfo->buf_);
 	free(shareInfo);
 }
-
-
-
 
 
 

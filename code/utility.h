@@ -27,6 +27,8 @@ int filelength(FILE *fp);
 char* readfile(const char *path);
 int64_t now();
 
+char *get_prog_name(char *argv);
+
 void user_wait();
 void delay();
 void stop();

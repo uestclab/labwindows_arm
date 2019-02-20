@@ -36,7 +36,7 @@ void send_csi(char* buf, int buf_len){
 
 
 void test(int fd){
-	int send_num = 1000000000;
+	int send_num = 3;
 	printf("start test \n");
 	while(send_num--){
 		char get[1024];
@@ -44,6 +44,8 @@ void test(int fd){
 		if(num == 0){
 			printf("send_num = %d \n" , send_num);
 			break;		
+		}else if(num != 1024){
+			printf("num != 1024 \n");		
 		}
 		send_csi(get,num);
 	}
@@ -54,7 +56,7 @@ void test(int fd){
 
 
 void test_init(){
-	file_path = "/home/gyl/liqingSpace/code/labwindows/labwindows_arm/code/test/csi_1.dat";
+	file_path = "/home/gyl/liqingSpace/code/labwindows/labwindows_arm/code/test/test_parse.dat";
 	if((fp=fopen(file_path,"rb"))==NULL)
 	{
 		printf("无法打开文件");
@@ -104,7 +106,14 @@ void* initCstNet(){
 
 }
 
+int inquiry_state_from(char *buf, int buf_len){
 
+
+}
+
+int initProcBroker(char *argv,int* fd){
+
+}
 
 
 

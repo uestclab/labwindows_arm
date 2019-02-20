@@ -14,6 +14,7 @@
 
 #ifndef USE_STUB
 	#include "csiLoopMain.h"
+	#include "procBroker.h"
 #endif
 
 
@@ -55,6 +56,7 @@ int main(int argc,char** argv)
 	printf("stubMain()\n");
 	stubMain(&connfd); // stub test
 #endif
+	initProcBroker(argv[0],&connfd);
 	pthread_t* receive_pid = NULL;
 	receive_pid= initNet(&connfd);
 	pthread_join(*receive_pid, NULL);

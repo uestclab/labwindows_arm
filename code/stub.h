@@ -7,6 +7,9 @@ void startLoop();
 void stopcsi();
 void* initCstNet();
 
+int inquiry_state_from(char *buf, int buf_len);
+int initProcBroker(char *argv,int* fd);
+
 
 
 

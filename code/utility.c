@@ -77,6 +77,28 @@ int64_t now()
   return tv.tv_sec * 1000000 + tv.tv_usec;
 }
 
+
+char *get_prog_name(char *argv)
+{
+	int len = strlen(argv);
+	int i;
+	char *tmp = argv;
+	
+	for(i=len; i >=0; i--)
+	{
+		if(tmp[i] == '/'){
+			i++;
+			break;
+		}
+	}
+	
+	if(-1 == i){
+		i = 0;
+	}
+
+	return argv + i;
+}
+
 void user_wait()
 {
 	int c;

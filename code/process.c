@@ -17,6 +17,7 @@
 
 #ifndef USE_STUB
 	#include "csiLoopMain.h"
+	#include "procBroker.h"
 #endif
 
 #define BUFFER_SIZE 2560*4
@@ -72,7 +73,6 @@ void sendCjson(int connfd, char* stat_buf, int stat_buf_len){
 
 // ========= transfer json to broker and wait for response
 void processMessage(const char* buf, int32_t length,int connfd){ // later use thread pool
-	printf("processMessage()\n");
 	int type = myNtohl(buf + 4);
 	char* jsonfile = buf + sizeof(int32_t) + sizeof(int32_t);
 	if(type == 5){
@@ -85,20 +85,8 @@ void processMessage(const char* buf, int32_t length,int connfd){ // later use th
 	}else if(type == 8){
 		stopcsi();
 		return;
-	}
-	char* stat_buf;
-	int stat_buf_len;
-	int ret;
-	cJSON * root = NULL;
-    cJSON * item = NULL;
-    root = cJSON_Parse(jsonfile);
-    item = cJSON_GetObjectItem(root,"dst");
-	printf("dst = %s , type = %d \n",item->valuestring,type);
-	
-	cJSON_Delete(root);
-	
-	if(ret == 0){
-		sendCjson(connfd,jsonfile,length);
+	}else if(type == 1){ // json
+		inquiry_state_from(jsonfile,length-4);	
 	}
 }
 
