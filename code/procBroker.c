@@ -18,12 +18,12 @@ int *connect_fd = NULL;
 #define MAXSHAREBUF_SIZE 1024*10
 #define HEADROOM 8
 
-void sendStateInquiry(int connfd, char* stat_buf, int stat_buf_len){
+void sendStateInquiry(int connfd, char* stat_buf, int stat_buf_len, int type){
 	int length = stat_buf_len + 4 + 4;
 	char* temp_buf = malloc(length);
 	// htonl ?
 	*((int32_t*)temp_buf) = (stat_buf_len + sizeof(int32_t));
-	*((int32_t*)(temp_buf+ sizeof(int32_t))) = (31); // 1--rssi , 2--CSI , 3--json: 31 -- reg_json
+	*((int32_t*)(temp_buf+ sizeof(int32_t))) = (type); // 1--rssi , 2--CSI , 3--json: 31 -- reg_json
 	memcpy(temp_buf + HEADROOM,stat_buf,stat_buf_len);
 	int ret = sendToPc(connfd, temp_buf, length);
 	free(temp_buf);
@@ -34,13 +34,20 @@ int initProcBroker(char *argv,int* fd){
 	int ret = init_broker(get_prog_name(argv), NULL, -1, NULL, NULL);
 	printf("get_prog_name(argv) = %s , ret = %d \n",get_prog_name(argv),ret);
 	
-
+	//register_callback("all",,"pub");
 	shareInfo = (shareBufInfo*)malloc(sizeof(shareBufInfo));
 	shareInfo->buf_ = malloc(MAXSHAREBUF_SIZE);
 	shareInfo->len_ = 0;
 	connect_fd = fd;
 	
 	return 0;
+}
+
+void printbuf_temp(char* buf,int buf_len){
+	int len = strlen(buf) + 1;
+	printf("buf_len = %d , len = %d \n",buf_len,len);
+	printf("buf_json = %s\n",buf);
+	printf("receive from reg ============================ \n");
 }
 
 int inquiry_state_from(char *buf, int buf_len){
@@ -52,13 +59,15 @@ int inquiry_state_from(char *buf, int buf_len){
     root = cJSON_Parse(buf);
     item = cJSON_GetObjectItem(root,"dst");
 	printf("dst = %s , \n",item->valuestring);
-	printf("buf_len = %d \n",buf_len);
-
 	ret = dev_transfer(buf, buf_len, &stat_buf, &stat_buf_len, item->valuestring, -1);
 
 	if(ret == 0 && stat_buf_len > 0 && connect_fd != NULL){
-		sendStateInquiry(*connect_fd,stat_buf,stat_buf_len+1);
-		printf("stat_buf = %s , stat_buf_len = %d \n", stat_buf, stat_buf_len);
+		if(strcmp(item->valuestring,"mon") == 0){
+			sendStateInquiry(*connect_fd,stat_buf,stat_buf_len+1,41); // system State
+		}else{
+			sendStateInquiry(*connect_fd,stat_buf,stat_buf_len+1,31); // reg state
+			printbuf_temp(stat_buf,stat_buf_len);
+		}
 	}
 	printf("------------------------------\n");
 	cJSON_Delete(root);

@@ -41,8 +41,8 @@ int gLinkfd = 0;
 void initHandlePcProcess(){
 	gReceBuffer_ = (char*)malloc(BUFFER_SIZE);
 	gSendMessage = (char*)malloc(BUFFER_SIZE);
-
-	para_t = newThreadPara();
+	if(para_t == NULL)
+		para_t = newThreadPara();
 }
 
 void freeHandlePcProcess(){
@@ -80,7 +80,7 @@ void processMessage(const char* buf, int32_t length,int connfd){ // later use th
 		receive_running = 0;
 		return;
 	}else if(type == 7){
-		//startcsi();
+		startcsi();
 		return;
 	}else if(type == 8){
 		stopcsi();

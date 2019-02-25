@@ -6,8 +6,10 @@
 
 void* initCstNet();
 
-void startcsi(void*);
+void startcsi();
 void stopcsi();
+
+void close_csi();
 
 
 

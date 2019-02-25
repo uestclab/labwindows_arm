@@ -36,7 +36,7 @@ void send_csi(char* buf, int buf_len){
 
 
 void test(int fd){
-	int send_num = 3;
+	int send_num = 10000000;
 	printf("start test \n");
 	while(send_num--){
 		char get[1024];
@@ -98,21 +98,23 @@ void startLoop(){
 }
 
 void stopcsi(){
-	
+	printf("stopcsi()\n");
 }
 
 void* initCstNet(){
-
-
+	printf("initCstNet()\n");
 }
 
 int inquiry_state_from(char *buf, int buf_len){
-
+	int get_len = strlen(buf) + 1;
+	printf("get_len = %d , buf_len = %d \n", get_len, buf_len);
+	printf("json buf = %s \n", buf);
+	printf("=====================================\n");
 
 }
 
 int initProcBroker(char *argv,int* fd){
-
+	printf("initProcBroker()\n");
 }
 
 

@@ -5,6 +5,7 @@
 
 
 void *dev_lq = NULL;
+static int useSwitch = 0;
 
 /* ---------------------------  external interface  ------------------------------------- */
 
@@ -25,42 +26,55 @@ int csi_callback(char* buf, int buf_len, void* arg)
 	return 0;
 }
 
-void *dev_next = NULL;
-
 void* initCstNet(){
 	printf("initCstNet-------------\n");
 	dev_lq = axidma_open();
-	if(dev_lq == NULL)
+	if(dev_lq == NULL){
 		printf("dev_lq == NULL axidma_open\n");
-	int rc = -99;
+		return NULL;
+	}
+	int rc;
 	rc = axidma_register_callback(dev_lq, csi_callback, NULL);
-	printf("rc = %d , initCstNet\n", rc);
-	startcsi(dev_lq);
 	return dev_lq;
 }
 
-void startcsi(void* pd){
-	printf("startcsi\n");
-	int rc = -99;
-	if(pd == NULL)
-		printf("pd == NULL startcsi\n");
-	else{
-		dev_next = pd;
-		rc = axidma_start(pd);
+void startcsi(){
+	int rc;
+	if(useSwitch == 1){
+		printf("axidma is already start\n");
+		return;
+	}
+	if(dev_lq == NULL){
+		printf("dev_lq == NULL startcsi\n");
+		return;
+	}else{
+		rc = axidma_start(dev_lq);
+		useSwitch = 1;
 	}
 	printf("rc = %d , startcsi \n" , rc);
 }
 
 void stopcsi(){
-	printf("stopcsi\n");
-	if(dev_next == NULL)
-		printf("dev_next == NULL");
-	if(dev_lq == NULL)
-		printf("dev_lq == NULL");
 	int rc;
-	rc = axidma_stop(dev_next);
-	axidma_close(dev_next);
-	
+	if(useSwitch == 0){
+		printf("axidma is already stop\n");
+		return;
+	}
+	if(dev_lq == NULL){
+		printf("dev_lq == NULL");
+		return;
+	}else{
+		rc = axidma_stop(dev_lq);
+		useSwitch = 0;
+	}
+}
+
+void close_csi(){
+	if(dev_lq == NULL){
+		printf("dev_lq == NULL in close_csi\n");
+		return;
+	}
+	axidma_close(dev_lq);
 }
 
 
