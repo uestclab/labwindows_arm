@@ -75,7 +75,11 @@ void sendCjson(int connfd, char* stat_buf, int stat_buf_len){
 void processMessage(const char* buf, int32_t length,int connfd){ // later use thread pool
 	int type = myNtohl(buf + 4);
 	char* jsonfile = buf + sizeof(int32_t) + sizeof(int32_t);
-	if(type == 5){
+	if(type == 4){
+		initCstNet();
+	}else if(type == 5){
+		stopcsi();
+		close_csi();
 		printf("receive : %s\n",jsonfile);
 		receive_running = 0;
 		return;
@@ -214,7 +218,6 @@ pthread_t* initNet(int *fd){
 			initHandlePcProcess();		
 			receive_running = 1;
 			int ret = pthread_create(para_t->thread_pid, NULL, receive_thread, (void*)(fd));
-			initCstNet();
 #ifdef USE_STUB
 			startLoop(); // stub test
 #endif

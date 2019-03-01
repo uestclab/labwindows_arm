@@ -29,12 +29,34 @@ void sendStateInquiry(int connfd, char* stat_buf, int stat_buf_len, int type){
 	free(temp_buf);
 }
 
+
+int process_exception(char* buf, int buf_len, char *from, void* arg)
+{
+	int ret = 0;
+	if(strcmp(from,"mon/all/pub/system_stat") == 0){
+		sendStateInquiry(*connect_fd,buf,buf_len+1,41);
+	}
+
+
+
+	printf("from : %s\n",from);
+	printf("buf = %s , buf_len = %d \n",buf, buf_len);
+	return ret;
+}
+
+
 int initProcBroker(char *argv,int* fd){
 
 	int ret = init_broker(get_prog_name(argv), NULL, -1, NULL, NULL);
 	printf("get_prog_name(argv) = %s , ret = %d \n",get_prog_name(argv),ret);
 	
 	//register_callback("all",,"pub");
+
+	ret = register_callback("all", process_exception, "#");
+	if(ret != 0)
+		printf("register_callback error in initBroker\n");
+
+
 	shareInfo = (shareBufInfo*)malloc(sizeof(shareBufInfo));
 	shareInfo->buf_ = malloc(MAXSHAREBUF_SIZE);
 	shareInfo->len_ = 0;
@@ -64,6 +86,8 @@ int inquiry_state_from(char *buf, int buf_len){
 	if(ret == 0 && stat_buf_len > 0 && connect_fd != NULL){
 		if(strcmp(item->valuestring,"mon") == 0){
 			sendStateInquiry(*connect_fd,stat_buf,stat_buf_len+1,41); // system State
+		}else if(strcmp(item->valuestring,"gpio") == 0){
+			sendStateInquiry(*connect_fd,stat_buf,stat_buf_len+1,51); // gpio State
 		}else{
 			sendStateInquiry(*connect_fd,stat_buf,stat_buf_len+1,31); // reg state
 			printbuf_temp(stat_buf,stat_buf_len);
@@ -71,6 +95,7 @@ int inquiry_state_from(char *buf, int buf_len){
 	}
 	printf("------------------------------\n");
 	cJSON_Delete(root);
+	free(stat_buf);
 	return ret;
 }
 

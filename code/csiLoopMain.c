@@ -27,8 +27,11 @@ int csi_callback(char* buf, int buf_len, void* arg)
 }
 
 void* initCstNet(){
-	printf("initCstNet-------------\n");
-	dev_lq = axidma_open();
+	printf("initCstNet open axidma -------------\n");
+	if(dev_lq != NULL)
+		return dev_lq;
+	else
+		dev_lq = axidma_open();
 	if(dev_lq == NULL){
 		printf("dev_lq == NULL axidma_open\n");
 		return NULL;
@@ -50,8 +53,8 @@ void startcsi(){
 	}else{
 		rc = axidma_start(dev_lq);
 		useSwitch = 1;
+		printf("rc = %d , startcsi \n" , rc);
 	}
-	printf("rc = %d , startcsi \n" , rc);
 }
 
 void stopcsi(){
@@ -61,11 +64,12 @@ void stopcsi(){
 		return;
 	}
 	if(dev_lq == NULL){
-		printf("dev_lq == NULL");
+		printf("dev_lq == NULL stopcsi\n");
 		return;
 	}else{
 		rc = axidma_stop(dev_lq);
 		useSwitch = 0;
+		printf("rc = %d , stopcsi \n" , rc);
 	}
 }
 
@@ -75,6 +79,7 @@ void close_csi(){
 		return;
 	}
 	axidma_close(dev_lq);
+	dev_lq = NULL;
 }
 
 
