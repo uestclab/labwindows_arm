@@ -175,14 +175,14 @@ void receive_signal(){ //  exit program if SIGINT
 }
 
 
-pthread_t* initNet(int *fd){
+int initNet(int *fd){
 	int connfd = -1;
     struct sockaddr_in servaddr;
  
     if( (listenfd = socket(AF_INET,SOCK_STREAM,0)) == -1)
     {
         printf("create socket error: %s(errno: %d)\n",strerror(errno),errno);
-        return 0;
+        return -1;
     }
  
     int one = 1;
@@ -196,13 +196,13 @@ pthread_t* initNet(int *fd){
     if( bind(listenfd,(struct sockaddr*)&servaddr,sizeof(servaddr)) == -1)
     {
         printf("bind socket error: %s(errno: %d)\n",strerror(errno),errno);
-        return 0;
+        return -1;
     }
  
     if( listen(listenfd,10) == -1)
     {
         printf("listen socket error: %s(errno: %d)\n",strerror(errno),errno);
-        return 0;
+        return -1;
     }
  
     printf("========waiting for client's request========\n");
@@ -223,7 +223,7 @@ pthread_t* initNet(int *fd){
 #endif
 		}
 	}
-	return NULL;
+	return 0;
 }
 
 // send thread safe

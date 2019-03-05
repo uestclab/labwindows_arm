@@ -8,7 +8,7 @@
 #include "cJSON.h"
 
 
-pthread_t* initNet(int *fd);
+int initNet(int *fd);
 
 int sendToPc(int connfd, char* send_buf, int send_buf_len);
 

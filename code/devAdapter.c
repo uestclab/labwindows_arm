@@ -57,9 +57,9 @@ int main(int argc,char** argv)
 	stubMain(&connfd); // stub test
 #endif
 	initProcBroker(argv[0],&connfd);
-	pthread_t* receive_pid = NULL;
-	receive_pid= initNet(&connfd);
-	pthread_join(*receive_pid, NULL);
+
+	int ret = initNet(&connfd);
+
 	destoryProcBroker();
 	printf("end main\n");
     return 0;

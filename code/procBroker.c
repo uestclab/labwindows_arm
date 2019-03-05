@@ -78,18 +78,28 @@ int inquiry_state_from(char *buf, int buf_len){
 	int stat_buf_len = 0;
 	cJSON * root = NULL;
     cJSON * item = NULL;
+	cJSON * item_type = NULL;
     root = cJSON_Parse(buf);
-    item = cJSON_GetObjectItem(root,"dst");
+    item = cJSON_GetObjectItem(root,"dst"); // different device is a dst
 	printf("dst = %s , \n",item->valuestring);
 	ret = dev_transfer(buf, buf_len, &stat_buf, &stat_buf_len, item->valuestring, -1);
 
+	// type is my own string used to distinguish different message request
+	// GW_messageType.h define
+	item_type = cJSON_GetObjectItem(root,"type");
+	printf("item_type = %s , \n",item_type->valuestring);
+	int type = 0;
 	if(ret == 0 && stat_buf_len > 0 && connect_fd != NULL){
-		if(strcmp(item->valuestring,"mon") == 0){
-			sendStateInquiry(*connect_fd,stat_buf,stat_buf_len+1,41); // system State
-		}else if(strcmp(item->valuestring,"gpio") == 0){
-			sendStateInquiry(*connect_fd,stat_buf,stat_buf_len+1,51); // gpio State
-		}else{
-			sendStateInquiry(*connect_fd,stat_buf,stat_buf_len+1,31); // reg state
+		if(strcmp(item->valuestring,"mon") == 0){ // system monitor State
+			sendStateInquiry(*connect_fd,stat_buf,stat_buf_len+1,41); 
+		}else if(strcmp(item->valuestring,"gpio") == 0){ // gpio State
+			sendStateInquiry(*connect_fd,stat_buf,stat_buf_len+1,51);
+		}else if(strcmp(item->valuestring,"reg") == 0){ // reg state
+			if(strcmp(item_type->valuestring,"fpga") == 0)
+				type = 32;
+			else
+				type = 31;
+			sendStateInquiry(*connect_fd,stat_buf,stat_buf_len+1,type);
 			printbuf_temp(stat_buf,stat_buf_len);
 		}
 	}
