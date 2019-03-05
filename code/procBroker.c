@@ -86,9 +86,10 @@ int inquiry_state_from(char *buf, int buf_len){
 
 	// type is my own string used to distinguish different message request
 	// GW_messageType.h define
-	item_type = cJSON_GetObjectItem(root,"type");
+	item_type = cJSON_GetObjectItem(root,"gw_type");
 	printf("item_type = %s , \n",item_type->valuestring);
 	int type = 0;
+
 	if(ret == 0 && stat_buf_len > 0 && connect_fd != NULL){
 		if(strcmp(item->valuestring,"mon") == 0){ // system monitor State
 			sendStateInquiry(*connect_fd,stat_buf,stat_buf_len+1,41); 
@@ -100,14 +101,29 @@ int inquiry_state_from(char *buf, int buf_len){
 			else
 				type = 31;
 			sendStateInquiry(*connect_fd,stat_buf,stat_buf_len+1,type);
-			printbuf_temp(stat_buf,stat_buf_len);
 		}
+		printbuf_temp(stat_buf,stat_buf_len);
+		free(stat_buf);
 	}
 	printf("------------------------------\n");
 	cJSON_Delete(root);
-	free(stat_buf);
 	return ret;
 }
+
+// ---------- rssi ----------------
+int rssi_state_change(char *buf, int buf_len){
+	printf("rssi json = %s \n",buf);
+	int ret = -1;
+	char* stat_buf = NULL;
+	int stat_buf_len = 0;
+	ret = dev_transfer(buf, buf_len, &stat_buf, &stat_buf_len, NULL, -1);
+
+	if(ret == 0 && stat_buf_len > 0 && connect_fd != NULL){
+		printf("rssi return json = %s \n", stat_buf);
+		free(stat_buf);
+	}
+}
+
 
 
 void destoryProcBroker(){

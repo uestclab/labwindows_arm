@@ -91,6 +91,8 @@ void processMessage(const char* buf, int32_t length,int connfd){ // later use th
 		return;
 	}else if(type == 1){ // json
 		inquiry_state_from(jsonfile,length-4);	
+	}else if(type == 2){ // rssi json
+		rssi_state_change(jsonfile,length-4);
 	}
 }
 
