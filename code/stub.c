@@ -101,10 +101,6 @@ void stopcsi(){
 	printf("stopcsi()\n");
 }
 
-void* initCstNet(){
-	printf("initCstNet()\n");
-}
-
 int inquiry_state_from(char *buf, int buf_len){
 	int get_len = strlen(buf) + 1;
 	printf("get_len = %d , buf_len = %d \n", get_len, buf_len);
@@ -113,13 +109,31 @@ int inquiry_state_from(char *buf, int buf_len){
 
 }
 
-int initProcBroker(char *argv,int* fd){
+int initProcBroker(char *argv,int* fd,zlog_category_t* log_handler){
 	printf("initProcBroker()\n");
 }
 
 
+void startcsi(){
+	printf("startcsi()\n");
+}
 
 
+void close_csi(){
+	printf("close_csi()\n");
+}
+
+void destoryProcBroker(){
+	printf("destoryProcBroker()\n");
+}
+
+void* initCstNet(zlog_category_t* log_handler){
+	printf("initCstNet\n");
+}
+
+int rssi_state_change(char *buf, int buf_len){
+	return 0;
+}
 
 
 

@@ -2,7 +2,13 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#include <sys/socket.h>
 #include <netinet/in.h>
+#include <sys/ioctl.h>
+#include <net/if.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include "utility.h"
 
@@ -98,6 +104,41 @@ char *get_prog_name(char *argv)
 
 	return argv + i;
 }
+
+// get eth up or link state
+/*
+	return: 
+		0 : up
+		1 : down
+	    -1 : error
+*/
+int connect_check(char* eth)
+{
+	
+	int net_fd = -1;
+	char statue[20];
+	
+	if(strcmp(eth,"eth0") == 0)
+		net_fd=open("/sys/class/net/eth0/operstate",O_RDONLY);
+	else if(strcmp(eth,"eth1") == 0)
+		net_fd=open("/sys/class/net/eth1/operstate",O_RDONLY);
+	if(net_fd<0)
+	{
+	
+		printf("connect_check() file open err\n");
+		return 0;
+	}
+	memset(statue,0,sizeof(statue));
+    int ret=read(net_fd,statue,10);
+	if(NULL!=strstr(statue,"up")){
+		return 0;
+	}else if(NULL!=strstr(statue,"down")){
+		return 1;
+	}else{
+		return -1;
+	}
+}
+
 
 void user_wait()
 {

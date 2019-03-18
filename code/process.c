@@ -10,6 +10,7 @@
 #include "process.h"
 #include "cJSON.h"
 #include "utility.h"
+#include "zlog.h"
 
 #ifdef USE_STUB
 	#include "stub.h"
@@ -24,6 +25,7 @@
 #define SEND_HEADROOM 8
 // temp
 
+zlog_category_t *temp_log_handler = NULL;
 
 // --------------
 
@@ -76,11 +78,11 @@ void processMessage(const char* buf, int32_t length,int connfd){ // later use th
 	int type = myNtohl(buf + 4);
 	char* jsonfile = buf + sizeof(int32_t) + sizeof(int32_t);
 	if(type == 4){
-		initCstNet();
+		initCstNet(temp_log_handler);
 	}else if(type == 5){
 		stopcsi();
 		close_csi();
-		printf("receive : %s\n",jsonfile);
+		zlog_info(temp_log_handler,"receive : %s\n",jsonfile);
 		receive_running = 0;
 		return;
 	}else if(type == 7){
@@ -157,13 +159,13 @@ void receive(int connfd){ // receive -- | messageLength(4 Byte) | type(4 Byte) |
 
 void *
 receive_thread(void* args){
-	printf("receive_thread()\n");
+	zlog_info(temp_log_handler,"receive_thread()\n");
 	int connfd = *((int*)args);
     while(receive_running == 1){
     	receive(connfd);
     }
 	freeHandlePcProcess();
-    printf("Exit receive_thread()\n");
+    zlog_info(temp_log_handler,"Exit receive_thread()\n");
 
 }
 
@@ -172,18 +174,19 @@ receive_thread(void* args){
 
 void receive_signal(){ //  exit program if SIGINT
 	receive_running = 0;
-	printf("end_receive_signal\n");
+	zlog_info(temp_log_handler,"end_receive_signal\n");
 	exit(0);
 }
 
 
-int initNet(int *fd){
+int initNet(int *fd,zlog_category_t* log_handler){
+	temp_log_handler = log_handler;
 	int connfd = -1;
     struct sockaddr_in servaddr;
  
     if( (listenfd = socket(AF_INET,SOCK_STREAM,0)) == -1)
     {
-        printf("create socket error: %s(errno: %d)\n",strerror(errno),errno);
+        zlog_error(temp_log_handler,"create socket error: %s(errno: %d)\n",strerror(errno),errno);
         return -1;
     }
  
@@ -197,23 +200,23 @@ int initNet(int *fd){
  
     if( bind(listenfd,(struct sockaddr*)&servaddr,sizeof(servaddr)) == -1)
     {
-        printf("bind socket error: %s(errno: %d)\n",strerror(errno),errno);
+        zlog_error(temp_log_handler,"bind socket error: %s(errno: %d)\n",strerror(errno),errno);
         return -1;
     }
  
     if( listen(listenfd,10) == -1)
     {
-        printf("listen socket error: %s(errno: %d)\n",strerror(errno),errno);
+        zlog_error(temp_log_handler,"listen socket error: %s(errno: %d)\n",strerror(errno),errno);
         return -1;
     }
  
-    printf("========waiting for client's request========\n");
+    zlog_info(temp_log_handler,"========waiting for client's request========\n");
 
 	while(1){
 		if( (connfd = accept(listenfd,(struct sockaddr*)NULL,NULL)) == -1 ){
-		    printf("accept socket error: %s(errno: %d)\n",strerror(errno),errno);
+		    zlog_error(temp_log_handler,"accept socket error: %s(errno: %d)\n",strerror(errno),errno);
 		}else{
-			printf("accept new client , connfd = %d \n", connfd);
+			zlog_info(temp_log_handler,"accept new client , connfd = %d \n", connfd);
 			*fd = connfd;
 			gLinkfd = connfd;
 			

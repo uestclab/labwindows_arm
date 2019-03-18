@@ -2,9 +2,10 @@
 #define CSILOOPMAIN_H
 
 #include "cst_net.h"
+#include "zlog.h"
 
 
-void* initCstNet();
+void* initCstNet(zlog_category_t* log_handler);
 
 void startcsi();
 void stopcsi();

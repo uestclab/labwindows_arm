@@ -6,9 +6,10 @@
 #include <stdbool.h>
 #include <pthread.h>
 #include "cJSON.h"
+#include "zlog.h"
 
 
-int initNet(int *fd);
+int initNet(int *fd,zlog_category_t* log_handler);
 
 int sendToPc(int connfd, char* send_buf, int send_buf_len);
 

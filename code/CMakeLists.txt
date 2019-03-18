@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-option(PUBLIC "This is a default option for PUBLIC" OFF)
+option(PUBLIC "This is a default option for PUBLIC" ON)
 message(STATUS "build public platform switch: "${PUBLIC})
 project(devAdapter)
 
@@ -18,6 +18,10 @@ if(${PUBLIC} STREQUAL "ON")
 	SET(CMAKE_CXX_COMPILER ${TOOLCHAIN_DIR}/bin/arm-linux-gnueabihf-g++)
 	link_directories("${PROJECT_SOURCE_DIR}/dependence/lib_arm")
 	# cross complie
+	# zlog
+	link_directories("/home/gyl/liqingSpace/code/GW_arm_server/temp/lib/")
+	include_directories("/home/gyl/liqingSpace/code/GW_arm_server/temp/include/")
+
 elseif(${PUBLIC} STREQUAL "OFF")
     message(STATUS "start to build PC platform.")
 	link_directories("${PROJECT_SOURCE_DIR}/dependence/lib")
@@ -46,6 +50,7 @@ add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 target_link_libraries(${PROJECT_NAME} cjson)
 target_link_libraries(${PROJECT_NAME} -pthread)
+target_link_libraries(${PROJECT_NAME} -lzlog)
 if(${PUBLIC} STREQUAL "ON")
 	target_link_libraries(${PROJECT_NAME} cst)
 	target_link_libraries(${PROJECT_NAME} broker)

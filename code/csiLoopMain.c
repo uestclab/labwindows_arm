@@ -2,7 +2,9 @@
 #include "utility.h"
 #include "process.h" // sendToPc()
 #include "cst_net.h"
+#include "zlog.h"
 
+zlog_category_t *csi_log_handler = NULL;
 
 void *dev_lq = NULL;
 static int useSwitch = 0;
@@ -26,14 +28,15 @@ int csi_callback(char* buf, int buf_len, void* arg)
 	return 0;
 }
 
-void* initCstNet(){
-	printf("initCstNet open axidma -------------\n");
+void* initCstNet(zlog_category_t* log_handler){
+	csi_log_handler = log_handler;
+	zlog_info(csi_log_handler,"initCstNet open axidma -------------\n");
 	if(dev_lq != NULL)
 		return dev_lq;
 	else
 		dev_lq = axidma_open();
 	if(dev_lq == NULL){
-		printf("dev_lq == NULL axidma_open\n");
+		zlog_error(csi_log_handler,"dev_lq == NULL axidma_open\n");
 		return NULL;
 	}
 	int rc;
@@ -44,38 +47,38 @@ void* initCstNet(){
 void startcsi(){
 	int rc;
 	if(useSwitch == 1){
-		printf("axidma is already start\n");
+		zlog_info(csi_log_handler,"axidma is already start\n");
 		return;
 	}
 	if(dev_lq == NULL){
-		printf("dev_lq == NULL startcsi\n");
+		zlog_info(csi_log_handler,"dev_lq == NULL startcsi\n");
 		return;
 	}else{
 		rc = axidma_start(dev_lq);
 		useSwitch = 1;
-		printf("rc = %d , startcsi \n" , rc);
+		zlog_info(csi_log_handler,"rc = %d , startcsi \n" , rc);
 	}
 }
 
 void stopcsi(){
 	int rc;
 	if(useSwitch == 0){
-		printf("axidma is already stop\n");
+		zlog_info(csi_log_handler,"axidma is already stop\n");
 		return;
 	}
 	if(dev_lq == NULL){
-		printf("dev_lq == NULL stopcsi\n");
+		zlog_info(csi_log_handler,"dev_lq == NULL stopcsi\n");
 		return;
 	}else{
 		rc = axidma_stop(dev_lq);
 		useSwitch = 0;
-		printf("rc = %d , stopcsi \n" , rc);
+		zlog_info(csi_log_handler,"rc = %d , stopcsi \n" , rc);
 	}
 }
 
 void close_csi(){
 	if(dev_lq == NULL){
-		printf("dev_lq == NULL in close_csi\n");
+		zlog_info(csi_log_handler,"dev_lq == NULL in close_csi\n");
 		return;
 	}
 	axidma_close(dev_lq);

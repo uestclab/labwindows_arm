@@ -10,7 +10,7 @@
 
 typedef struct shareBufInfo{
     char*       buf_;
-    int32_t 		len_;
+    int32_t 	len_;
 }shareBufInfo;
 
 typedef struct para_thread{
@@ -28,6 +28,8 @@ char* readfile(const char *path);
 int64_t now();
 
 char *get_prog_name(char *argv);
+int connect_check(char* eth);
+
 
 void user_wait();
 void delay();

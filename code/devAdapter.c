@@ -7,6 +7,7 @@
 #include <signal.h>
 #include "utility.h"
 #include "process.h"
+#include "zlog.h"
 
 #ifdef USE_STUB
 	#include "stub.h"
@@ -30,7 +31,6 @@
 /*  change version : 1. 	//return ntohl(be32); return be32;               */
 /*---------------------------------------------------------------------------*/
 
-
 static void process_signal(int signal)
 {
     switch(signal) {  
@@ -43,25 +43,55 @@ static void process_signal(int signal)
 }
 
 
+zlog_category_t * serverLog(const char* path){
+	int rc;
+	zlog_category_t *zlog_handler = NULL;
+
+	rc = zlog_init(path);
+
+	if (rc) {
+		printf("init serverLog failed\n");
+		return NULL;
+	}
+
+	zlog_handler = zlog_get_category("devAdapterlog");
+
+	if (!zlog_handler) {
+		printf("get cat fail\n");
+
+		zlog_fini();
+		return NULL;
+	}
+
+	return zlog_handler;
+}
+
+void closeServerLog(){
+	zlog_fini();
+}
+
 
 int main(int argc,char** argv)
 {
-
+	zlog_category_t *zlog_handler = serverLog("/run/media/mmcblk1p1/etc/zlog_default.conf");
 	if( SIG_ERR == signal(SIGINT, process_signal) ){
 		
 	}
+
 
 	int connfd = -1;
 #ifdef USE_STUB
 	printf("stubMain()\n");
 	stubMain(&connfd); // stub test
 #endif
-	initProcBroker(argv[0],&connfd);
+	initProcBroker(argv[0],&connfd,zlog_handler);
 
-	int ret = initNet(&connfd);
+	int ret = initNet(&connfd,zlog_handler);
 
 	destoryProcBroker();
-	printf("end main\n");
+	zlog_info(zlog_handler,"end main\n");
+	closeServerLog();
     return 0;
 }
+
 
