@@ -94,6 +94,8 @@ int initProcBroker(char *argv,int* fd,zlog_category_t* log_handler){
 	broker_log_handler = log_handler;
 	int ret = init_broker(get_prog_name(argv), NULL, -1, NULL, NULL);
 	zlog_info(broker_log_handler,"get_prog_name(argv) = %s , ret = %d \n",get_prog_name(argv),ret);
+	if( ret != 0)
+		return -2;
 
 	ret = register_callback("all", process_exception, "#");
 	if(ret != 0){

@@ -164,8 +164,9 @@ receive_thread(void* args){
     while(receive_running == 1){
     	receive(connfd);
     }
+	 zlog_info(temp_log_handler,"After receive_thread() and before freeHandlePcProcess()\n");
 	freeHandlePcProcess();
-    zlog_info(temp_log_handler,"Exit receive_thread()\n");
+    zlog_info(temp_log_handler,"end Exit receive_thread()\n");
 
 }
 

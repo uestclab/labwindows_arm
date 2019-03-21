@@ -78,18 +78,23 @@ int main(int argc,char** argv)
 		
 	}
 
-
+	zlog_info(zlog_handler,"start devAdapter process\n");
 	int connfd = -1;
 #ifdef USE_STUB
 	printf("stubMain()\n");
 	stubMain(&connfd); // stub test
 #endif
-	initProcBroker(argv[0],&connfd,zlog_handler);
+	int ret = initProcBroker(argv[0],&connfd,zlog_handler);
+	if(ret != 0){
+		zlog_info(zlog_handler,"initProcBroker fail ... end process\n");
+		closeServerLog();
+		return 0;
+	}
 
-	int ret = initNet(&connfd,zlog_handler);
+	ret = initNet(&connfd,zlog_handler);
 
 	destoryProcBroker();
-	zlog_info(zlog_handler,"end main\n");
+	zlog_info(zlog_handler,"devAdapter end main\n");
 	closeServerLog();
     return 0;
 }
