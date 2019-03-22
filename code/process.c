@@ -12,13 +12,11 @@
 #include "utility.h"
 #include "zlog.h"
 
-#ifdef USE_STUB
-	#include "stub.h"
-#endif
 
 #ifndef USE_STUB
 	#include "csiLoopMain.h"
 	#include "procBroker.h"
+	#include "exception.h"
 #endif
 
 #define BUFFER_SIZE 2560*4
@@ -40,14 +38,14 @@ para_thread* para_t = NULL;
 int listenfd;
 int gLinkfd = 0;
 
-void initHandlePcProcess(){
+void initHandleProcess(){
 	gReceBuffer_ = (char*)malloc(BUFFER_SIZE);
 	gSendMessage = (char*)malloc(BUFFER_SIZE);
 	if(para_t == NULL)
 		para_t = newThreadPara();
 }
 
-void freeHandlePcProcess(){
+void freeHandleProcess(){
 	if(gReceBuffer_ != NULL)
 	{
 		free(gReceBuffer_);
@@ -60,42 +58,38 @@ void freeHandlePcProcess(){
 	}
 	gMoreData_ = 0;
 	receive_running = 0;
+	close(gLinkfd);
+	zlog_info(temp_log_handler,"freeHandleProcess() \n");
 }
 
-void sendCjson(int connfd, char* stat_buf, int stat_buf_len){
-	int length = stat_buf_len + 4 + 4;
-	char* temp_buf = malloc(length);
-	// htonl ?
-	*((int32_t*)temp_buf) = (stat_buf_len + sizeof(int32_t));
-	*((int32_t*)(temp_buf+ sizeof(int32_t))) = (3); // 1--rssi , 2--CSI , 3--json
-	memcpy(temp_buf + SEND_HEADROOM,stat_buf,stat_buf_len);
-	int ret = sendToPc(connfd, temp_buf, length);
-	free(temp_buf);
-}
 
 // ========= transfer json to broker and wait for response
-void processMessage(const char* buf, int32_t length,int connfd){ // later use thread pool
+int processMessage(const char* buf, int32_t length,int connfd){ // later use thread pool
 	int type = myNtohl(buf + 4);
 	char* jsonfile = buf + sizeof(int32_t) + sizeof(int32_t);
 	if(type == 4){
 		initCstNet(temp_log_handler);
+	}else if(type == 18){
+		zlog_info(temp_log_handler,"receive end link \n");
+		receive_running = 0;
+		return 1;
+	}else if(type == 99){ // heart beat
+		zlog_info(temp_log_handler," ---- heart beat \n");
+		check_variable(1,1);
 	}else if(type == 5){
 		stopcsi();
 		close_csi();
 		zlog_info(temp_log_handler,"receive : %s\n",jsonfile);
-		receive_running = 0;
-		return;
 	}else if(type == 7){
 		startcsi();
-		return;
 	}else if(type == 8){
 		stopcsi();
-		return;
 	}else if(type == 1){ // json
 		inquiry_state_from(jsonfile,length-4);	
 	}else if(type == 2){ // rssi json
 		rssi_state_change(jsonfile,length-4);
 	}
+	return 0;
 }
 
 void receive(int connfd){ // receive -- | messageLength(4 Byte) | type(4 Byte) | json file(messageLength - 4) | 
@@ -109,6 +103,8 @@ void receive(int connfd){ // receive -- | messageLength(4 Byte) | type(4 Byte) |
 
     n = recv(connfd, temp_receBuffer, BUFFER_SIZE,0);
     if(n<=0){
+		if(n < 0)
+			zlog_info(temp_log_handler,"recv() n <0 \n");
 		return;
     }
     size = n;
@@ -144,7 +140,9 @@ void receive(int connfd){ // receive -- | messageLength(4 Byte) | type(4 Byte) |
             } 
             else// at least one message 
             {
-				processMessage(pStart,messageLength,connfd);
+				int ret = processMessage(pStart,messageLength,connfd);
+				if(ret == 1)
+					break;
 				// move to next message
                 pStart = pStart + messageLength + MinHeaderLen;
                 totalByte = totalByte - messageLength - MinHeaderLen;
@@ -157,15 +155,16 @@ void receive(int connfd){ // receive -- | messageLength(4 Byte) | type(4 Byte) |
     }	
 }
 
+
 void *
 receive_thread(void* args){
-	zlog_info(temp_log_handler,"receive_thread()\n");
+	zlog_info(temp_log_handler,"start receive_thread()\n");
 	int connfd = *((int*)args);
     while(receive_running == 1){
     	receive(connfd);
     }
-	 zlog_info(temp_log_handler,"After receive_thread() and before freeHandlePcProcess()\n");
-	freeHandlePcProcess();
+	zlog_info(temp_log_handler,"before freeHandleProcess()\n");
+	freeHandleProcess();
     zlog_info(temp_log_handler,"end Exit receive_thread()\n");
 
 }
@@ -174,9 +173,7 @@ receive_thread(void* args){
 /* ---------------------------  external interface  ------------------------------------- */
 
 void receive_signal(){ //  exit program if SIGINT
-	receive_running = 0;
-	zlog_info(temp_log_handler,"end_receive_signal\n");
-	exit(0);
+	zlog_info(temp_log_handler,"receive_signal -- SIGINT\n");
 }
 
 
@@ -217,16 +214,14 @@ int initNet(int *fd,zlog_category_t* log_handler){
 		if( (connfd = accept(listenfd,(struct sockaddr*)NULL,NULL)) == -1 ){
 		    zlog_error(temp_log_handler,"accept socket error: %s(errno: %d)\n",strerror(errno),errno);
 		}else{
-			zlog_info(temp_log_handler,"accept new client , connfd = %d \n", connfd);
+			zlog_info(temp_log_handler," -------------------accept new client , connfd = %d \n", connfd);
 			*fd = connfd;
 			gLinkfd = connfd;
-			
-			initHandlePcProcess();		
+			// call timer
+			StartTimer();			
+			initHandleProcess(); // init memory and thread variable		
 			receive_running = 1;
 			int ret = pthread_create(para_t->thread_pid, NULL, receive_thread, (void*)(fd));
-#ifdef USE_STUB
-			startLoop(); // stub test
-#endif
 		}
 	}
 	return 0;
@@ -245,5 +240,10 @@ int sendToPc(int connfd, char* send_buf, int send_buf_len){
 
 /* ---------------------------------------------------------------- */
 
-
+void stopReceThread(){
+    pthread_cancel(*para_t->thread_pid);
+    pthread_join(*para_t->thread_pid, NULL); //wait the thread stopped
+	freeHandleProcess();
+	zlog_info(temp_log_handler,"stopReceThread() \n");
+}
 

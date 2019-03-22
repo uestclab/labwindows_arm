@@ -15,4 +15,6 @@ int sendToPc(int connfd, char* send_buf, int send_buf_len);
 
 void receive_signal();
 
+void stopReceThread();
+
 #endif//PROCESS_H

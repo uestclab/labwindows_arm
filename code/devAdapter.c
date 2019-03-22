@@ -9,13 +9,10 @@
 #include "process.h"
 #include "zlog.h"
 
-#ifdef USE_STUB
-	#include "stub.h"
-#endif
-
 #ifndef USE_STUB
 	#include "csiLoopMain.h"
 	#include "procBroker.h"
+	#include "exception.h"
 #endif
 
 
@@ -75,6 +72,7 @@ int main(int argc,char** argv)
 	}
 
 	zlog_info(zlog_handler,"start devAdapter process\n");
+	InitTimer(zlog_handler);
 	int connfd = -1;
 #ifdef USE_STUB
 	printf("stubMain()\n");
@@ -91,6 +89,7 @@ int main(int argc,char** argv)
 
 	destoryProcBroker();
 	zlog_info(zlog_handler,"devAdapter end main\n");
+	closeTimer();
 	closeServerLog();
     return 0;
 }

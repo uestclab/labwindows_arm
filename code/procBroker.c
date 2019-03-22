@@ -83,9 +83,6 @@ int process_exception(char* buf, int buf_len, char *from, void* arg)
 		print_rssi_struct(*connect_fd,buf,buf_len); // send rssi struct stream to pc	
 	}
 
-	
-	//printf("from : %s\n",from);
-	//printf("buf = ?? , buf_len = %d \n", buf_len);
 	return ret;
 }
 
@@ -128,13 +125,13 @@ int inquiry_state_from(char *buf, int buf_len){
 	cJSON * item_type = NULL;
     root = cJSON_Parse(buf);
     item = cJSON_GetObjectItem(root,"dst"); // different device is a dst
-	zlog_info(broker_log_handler,"dst = %s , \n",item->valuestring);
+	//zlog_info(broker_log_handler,"dst = %s , \n",item->valuestring);
 	ret = dev_transfer(buf, buf_len, &stat_buf, &stat_buf_len, item->valuestring, -1);
 
 	// type is my own string used to distinguish different message request
 	// GW_messageType.h define
 	item_type = cJSON_GetObjectItem(root,"gw_type");
-	zlog_info(broker_log_handler,"item_type = %s , \n",item_type->valuestring);
+	//zlog_info(broker_log_handler,"item_type = %s , \n",item_type->valuestring);
 	int type = 0;
 
 	if(ret == 0 && stat_buf_len > 0 && connect_fd != NULL){
@@ -152,7 +149,7 @@ int inquiry_state_from(char *buf, int buf_len){
 		//printbuf_temp(stat_buf,stat_buf_len);
 		free(stat_buf);
 	}
-	zlog_info(broker_log_handler,"---------------------end inquiry_state_from---------\n");
+	//zlog_info(broker_log_handler,"---------------------end inquiry_state_from---------\n");
 	
 	cJSON_Delete(root);
 	return ret;

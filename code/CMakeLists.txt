@@ -24,6 +24,7 @@ if(${PUBLIC} STREQUAL "ON")
 
 elseif(${PUBLIC} STREQUAL "OFF")
     message(STATUS "start to build PC platform.")
+	add_definitions("-D USE_STUB")
 	link_directories("${PROJECT_SOURCE_DIR}/dependence/lib")
 endif(${PUBLIC} STREQUAL "ON")
 
@@ -40,9 +41,8 @@ include_directories("${PROJECT_SOURCE_DIR}/dependence/include")
 
 
 if(${PUBLIC} STREQUAL "ON") # cross complie
-	SET(SOURCE_FILES devAdapter.c process.c csiLoopMain.c utility.c procBroker.c)
+	SET(SOURCE_FILES devAdapter.c process.c csiLoopMain.c utility.c procBroker.c exception.c)
 elseif(${PUBLIC} STREQUAL "OFF") # stub test on pc
-	add_definitions("-D USE_STUB")
 	SET(SOURCE_FILES devAdapter.c process.c stub.c utility.c)
 endif(${PUBLIC} STREQUAL "ON")
 
