@@ -74,14 +74,14 @@ int processMessage(const char* buf, int32_t length,int connfd){ // later use thr
 		receive_running = 0;
 		return 1;
 	}else if(type == 99){ // heart beat
-		zlog_info(temp_log_handler," ---- heart beat \n");
+		//zlog_info(temp_log_handler," ---- heart beat \n");
 		check_variable(1,1);
 	}else if(type == 5){
 		stopcsi();
-		close_csi();
+		closecsi();
 		zlog_info(temp_log_handler,"receive : %s\n",jsonfile);
 	}else if(type == 7){
-		startcsi();
+		//startcsi();
 	}else if(type == 8){
 		stopcsi();
 	}else if(type == 1){ // json
@@ -163,7 +163,6 @@ receive_thread(void* args){
     while(receive_running == 1){
     	receive(connfd);
     }
-	zlog_info(temp_log_handler,"before freeHandleProcess()\n");
 	freeHandleProcess();
     zlog_info(temp_log_handler,"end Exit receive_thread()\n");
 
@@ -216,12 +215,12 @@ int initNet(int *fd,zlog_category_t* log_handler){
 		}else{
 			zlog_info(temp_log_handler," -------------------accept new client , connfd = %d \n", connfd);
 			*fd = connfd;
-			gLinkfd = connfd;
-			// call timer
-			StartTimer();			
+			gLinkfd = connfd;		
 			initHandleProcess(); // init memory and thread variable		
 			receive_running = 1;
 			int ret = pthread_create(para_t->thread_pid, NULL, receive_thread, (void*)(fd));
+			// call timer
+			StartTimer();	
 		}
 	}
 	return 0;
@@ -244,6 +243,14 @@ void stopReceThread(){
     pthread_cancel(*para_t->thread_pid);
     pthread_join(*para_t->thread_pid, NULL); //wait the thread stopped
 	freeHandleProcess();
+	// stop and close csi
+	zlog_info(temp_log_handler,"stopcsi() \n");
+	stopcsi();
+	//zlog_info(temp_log_handler,"close_csi() \n");
+	//close_csi();
+	// close rssi
+	zlog_info(temp_log_handler,"close_rssi() \n"); 
+	close_rssi();
 	zlog_info(temp_log_handler,"stopReceThread() \n");
 }
 

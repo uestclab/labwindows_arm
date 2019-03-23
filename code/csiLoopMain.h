@@ -10,7 +10,7 @@ void* initCstNet(zlog_category_t* log_handler);
 void startcsi();
 void stopcsi();
 
-void close_csi();
+void closecsi();
 
 
 

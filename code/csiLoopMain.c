@@ -76,13 +76,16 @@ void stopcsi(){
 	}
 }
 
-void close_csi(){
+void closecsi(){ // close error ! ---- 20190323
+	zlog_info(csi_log_handler,"enter close_csi \n");
 	if(dev_lq == NULL){
 		zlog_info(csi_log_handler,"dev_lq == NULL in close_csi\n");
 		return;
 	}
+	zlog_info(csi_log_handler,"before axidma_close : %x \n" , dev_lq);
 	axidma_close(dev_lq);
 	dev_lq = NULL;
+	zlog_info(csi_log_handler,"close_csi \n");
 }
 
 

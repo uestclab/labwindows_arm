@@ -29,7 +29,7 @@ void setTimer(int seconds, int mseconds)
 void OnTimer(){
 	int ret = check_variable(0,0);
 	if(ret == 1){ // receive heart_beat
-		zlog_info(ex_log_handler,"received heart_beat ** \n");
+		//zlog_info(ex_log_handler,"received heart_beat ** \n");
 	}else if(ret == 0){ // not receive in timer
 		zlog_info(ex_log_handler,"No heart_beat !!!!! \n");
 		stopReceThread();
@@ -85,7 +85,7 @@ int check_variable(int cmd, int value){
 	
 	int ret = -3;
 	if(cmd == 0){
-		zlog_info(ex_log_handler,"check_variable() : read \n");
+		//zlog_info(ex_log_handler,"check_variable() : read \n");
 		if(heart_beat == 0)
 			ret = 0;
 		else if(heart_beat == 1){
@@ -93,7 +93,7 @@ int check_variable(int cmd, int value){
 			ret = 1;
 		}
 	}else if(cmd == 1){
-		zlog_info(ex_log_handler,"check_variable() : write \n");
+		//zlog_info(ex_log_handler,"check_variable() : write \n");
 		heart_beat = value;
 		ret = 2;
 	}	

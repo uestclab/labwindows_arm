@@ -176,6 +176,32 @@ int rssi_state_change(char *buf, int buf_len){
 	cJSON_Delete(root);
 }
 
+void close_rssi(){
+	cJSON *root = cJSON_CreateObject();
+	cJSON_AddStringToObject(root, "dev", "/dev/i2c-0");
+	cJSON_AddStringToObject(root, "addr", "0x4a");
+	cJSON_AddStringToObject(root, "force", "0x1");
+	cJSON_AddStringToObject(root, "type", "rssi");
+	cJSON_AddStringToObject(root, "timer", "0");
+	cJSON_AddStringToObject(root, "pub_no", "1");
+	cJSON_AddStringToObject(root, "dst", "rf");
+	cJSON *array=cJSON_CreateArray();
+	cJSON_AddItemToObject(root,"op_cmd",array);
+
+	cJSON *arrayobj=cJSON_CreateObject();
+	cJSON_AddItemToArray(array,arrayobj);
+	cJSON_AddStringToObject(arrayobj, "_comment","rssi");
+	cJSON_AddStringToObject(arrayobj, "cmd","0");
+	cJSON_AddStringToObject(arrayobj, "reg","0x0a");
+	cJSON_AddStringToObject(arrayobj, "size","1");
+
+	char* close_rssi_jsonfile = cJSON_Print(root);
+
+	rssi_state_change(close_rssi_jsonfile,strlen(close_rssi_jsonfile));
+
+	cJSON_Delete(root);
+	free(close_rssi_jsonfile);
+}
 
 
 void destoryProcBroker(){
