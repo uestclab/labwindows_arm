@@ -55,9 +55,8 @@ void StartTimer()
 
 void StopTimer()
 {
-    pthread_cancel(*para_t_check->thread_pid);
-    pthread_join(*para_t_check->thread_pid, NULL); //wait the thread stopped
 	zlog_info(ex_log_handler,"StopTimer() \n");
+	pthread_exit(0);
 }
 
 void InitTimer(zlog_category_t * log_handler){

@@ -104,7 +104,7 @@ void receive(int connfd){ // receive -- | messageLength(4 Byte) | type(4 Byte) |
     n = recv(connfd, temp_receBuffer, BUFFER_SIZE,0);
     if(n<=0){
 		if(n < 0)
-			zlog_info(temp_log_handler,"recv() n <0 \n");
+			zlog_info(temp_log_handler,"recv() n <0 , n = %d \n" , n);
 		return;
     }
     size = n;
