@@ -81,7 +81,7 @@ int processMessage(const char* buf, int32_t length,int connfd){ // later use thr
 		closecsi();
 		zlog_info(temp_log_handler,"receive : %s\n",jsonfile);
 	}else if(type == 7){
-		//startcsi();
+		startcsi();
 	}else if(type == 8){
 		stopcsi();
 	}else if(type == 1){ // json
@@ -246,8 +246,8 @@ void stopReceThread(){
 	// stop and close csi
 	zlog_info(temp_log_handler,"stopcsi() \n");
 	stopcsi();
-	//zlog_info(temp_log_handler,"close_csi() \n");
-	//close_csi();
+	zlog_info(temp_log_handler,"stopReceThread : close_csi() \n");
+	closecsi();
 	// close rssi
 	zlog_info(temp_log_handler,"close_rssi() \n"); 
 	close_rssi();

@@ -31,10 +31,14 @@ int csi_callback(char* buf, int buf_len, void* arg)
 void* initCstNet(zlog_category_t* log_handler){
 	csi_log_handler = log_handler;
 	zlog_info(csi_log_handler,"initCstNet open axidma -------------\n");
-	if(dev_lq != NULL)
+	if(dev_lq != NULL){
+		zlog_info(csi_log_handler,"return dev_lq = %x -------------\n" , dev_lq);
 		return dev_lq;
-	else
+	}
+	else{
 		dev_lq = axidma_open();
+		zlog_info(csi_log_handler,"axidma_open() dev_lq = %x -------------\n" , dev_lq);
+	}
 	if(dev_lq == NULL){
 		zlog_error(csi_log_handler,"dev_lq == NULL axidma_open\n");
 		return NULL;
