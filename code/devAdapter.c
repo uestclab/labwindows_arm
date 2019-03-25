@@ -73,6 +73,7 @@ int main(int argc,char** argv)
 
 	zlog_info(zlog_handler,"start devAdapter process\n");
 	InitTimer(zlog_handler);
+	init_cst_state(zlog_handler);
 	int connfd = -1;
 #ifdef USE_STUB
 	printf("stubMain()\n");

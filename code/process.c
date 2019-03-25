@@ -68,22 +68,22 @@ int processMessage(const char* buf, int32_t length,int connfd){ // later use thr
 	int type = myNtohl(buf + 4);
 	char* jsonfile = buf + sizeof(int32_t) + sizeof(int32_t);
 	if(type == 4){
-		initCstNet(temp_log_handler);
+		initCstNet();
 	}else if(type == 18){
-		zlog_info(temp_log_handler,"receive end link \n");
-		receive_running = 0;
+		//zlog_info(temp_log_handler,"receive end link \n");
+		//receive_running = 0;
 		return 1;
 	}else if(type == 99){ // heart beat
 		//zlog_info(temp_log_handler," ---- heart beat \n");
 		check_variable(1,1);
 	}else if(type == 5){
-		stopcsi();
-		closecsi();
+		gw_stopcsi();
+		gw_closecsi();
 		zlog_info(temp_log_handler,"receive : %s\n",jsonfile);
 	}else if(type == 7){
-		startcsi();
+		gw_startcsi();
 	}else if(type == 8){
-		stopcsi();
+		gw_stopcsi();
 	}else if(type == 1){ // json
 		inquiry_state_from(jsonfile,length-4);	
 	}else if(type == 2){ // rssi json
@@ -240,14 +240,15 @@ int sendToPc(int connfd, char* send_buf, int send_buf_len){
 /* ---------------------------------------------------------------- */
 
 void stopReceThread(){
+	zlog_info(temp_log_handler,"enter stopReceThread() \n");
     pthread_cancel(*para_t->thread_pid);
     pthread_join(*para_t->thread_pid, NULL); //wait the thread stopped
 	freeHandleProcess();
 	// stop and close csi
-	zlog_info(temp_log_handler,"stopcsi() \n");
-	stopcsi();
-	zlog_info(temp_log_handler,"stopReceThread : close_csi() \n");
-	closecsi();
+	zlog_info(temp_log_handler,"gw_stopcsi() \n");
+	gw_stopcsi();
+	zlog_info(temp_log_handler,"stopReceThread : gw_close_csi() \n");
+	gw_closecsi();
 	// close rssi
 	zlog_info(temp_log_handler,"close_rssi() \n"); 
 	close_rssi();

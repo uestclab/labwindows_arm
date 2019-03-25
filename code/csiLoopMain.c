@@ -7,7 +7,7 @@
 zlog_category_t *csi_log_handler = NULL;
 
 void *dev_lq = NULL;
-static int useSwitch = 0;
+int useSwitch = 0;
 
 /* ---------------------------  external interface  ------------------------------------- */
 
@@ -28,8 +28,14 @@ int csi_callback(char* buf, int buf_len, void* arg)
 	return 0;
 }
 
-void* initCstNet(zlog_category_t* log_handler){
+void init_cst_state(zlog_category_t* log_handler){
 	csi_log_handler = log_handler;
+	zlog_info(csi_log_handler,"init_cst_state()\n");
+	useSwitch = 0;
+	dev_lq = NULL;
+}
+
+void* initCstNet(){
 	zlog_info(csi_log_handler,"initCstNet open axidma -------------\n");
 	if(dev_lq != NULL){
 		zlog_info(csi_log_handler,"return dev_lq = %x -------------\n" , dev_lq);
@@ -48,48 +54,49 @@ void* initCstNet(zlog_category_t* log_handler){
 	return dev_lq;
 }
 
-void startcsi(){
+void gw_startcsi(){
 	int rc;
 	if(useSwitch == 1){
 		zlog_info(csi_log_handler,"axidma is already start\n");
 		return;
 	}
 	if(dev_lq == NULL){
-		zlog_info(csi_log_handler,"dev_lq == NULL startcsi\n");
+		zlog_info(csi_log_handler,"dev_lq == NULL gw_startcsi\n");
 		return;
 	}else{
 		rc = axidma_start(dev_lq);
 		useSwitch = 1;
-		zlog_info(csi_log_handler,"rc = %d , startcsi \n" , rc);
+		zlog_info(csi_log_handler,"rc = %d , gw_startcsi \n" , rc);
 	}
 }
 
-void stopcsi(){
+void gw_stopcsi(){
+	zlog_info(csi_log_handler,"enter gw_stopcsi() , useSwitch = %d \n",useSwitch);
 	int rc;
 	if(useSwitch == 0){
 		zlog_info(csi_log_handler,"axidma is already stop\n");
 		return;
 	}
 	if(dev_lq == NULL){
-		zlog_info(csi_log_handler,"dev_lq == NULL stopcsi\n");
+		zlog_info(csi_log_handler,"dev_lq == NULL gw_stopcsi\n");
 		return;
 	}else{
 		rc = axidma_stop(dev_lq);
 		useSwitch = 0;
-		zlog_info(csi_log_handler,"rc = %d , stopcsi \n" , rc);
+		zlog_info(csi_log_handler,"rc = %d , gw_stopcsi \n" , rc);
 	}
 }
 
-void closecsi(){ // close error ! ---- 20190323
-	zlog_info(csi_log_handler,"enter close_csi \n");
+void gw_closecsi(){ // close error ! ---- 20190323
+	zlog_info(csi_log_handler,"enter gw_closecsi \n");
 	if(dev_lq == NULL){
-		zlog_info(csi_log_handler,"dev_lq == NULL in close_csi\n");
+		zlog_info(csi_log_handler,"dev_lq == NULL in gw_closecsi\n");
 		return;
 	}
 	zlog_info(csi_log_handler,"before axidma_close : %x \n" , dev_lq);
 	axidma_close(dev_lq);
 	dev_lq = NULL;
-	zlog_info(csi_log_handler,"close_csi \n");
+	zlog_info(csi_log_handler,"gw_closecsi \n");
 }
 
 

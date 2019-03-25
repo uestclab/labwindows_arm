@@ -5,12 +5,13 @@
 #include "zlog.h"
 
 
-void* initCstNet(zlog_category_t* log_handler);
+void* initCstNet();
+void init_cst_state(zlog_category_t* log_handler);
 
-void startcsi();
-void stopcsi();
+void gw_startcsi();
+void gw_stopcsi();
 
-void closecsi();
+void gw_closecsi();
 
 
 
