@@ -7,6 +7,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <fcntl.h>
+
+
 #include "process.h"
 #include "cJSON.h"
 #include "utility.h"
@@ -38,11 +41,24 @@ para_thread* para_t = NULL;
 int listenfd;
 int gLinkfd = 0;
 
-void initHandleProcess(){
+void gw_set_non_blocking_mode(int sock)
+{
+    int flags = fcntl(sock, F_GETFL, 0);
+    fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+}
+
+void gw_set_recv_timeout_mode(int sock){
+	struct timeval timeout = {0,5}; 
+	setsockopt(sock,SOL_SOCKET,SO_RCVTIMEO,(char *)&timeout,sizeof(struct timeval));
+}
+
+void initHandleProcess(int sock){
 	gReceBuffer_ = (char*)malloc(BUFFER_SIZE);
 	gSendMessage = (char*)malloc(BUFFER_SIZE);
 	if(para_t == NULL)
 		para_t = newThreadPara();
+	gw_set_recv_timeout_mode(sock);
+	//gw_set_non_blocking_mode(sock);
 }
 
 void freeHandleProcess(){
@@ -57,11 +73,10 @@ void freeHandleProcess(){
 		gSendMessage = NULL;
 	}
 	gMoreData_ = 0;
-	receive_running = 0;
 	close(gLinkfd);
 	zlog_info(temp_log_handler,"freeHandleProcess() \n");
+	receive_running = 0;
 }
-
 
 // ========= transfer json to broker and wait for response
 int processMessage(const char* buf, int32_t length,int connfd){ // later use thread pool
@@ -70,8 +85,6 @@ int processMessage(const char* buf, int32_t length,int connfd){ // later use thr
 	if(type == 4){
 		initCstNet();
 	}else if(type == 18){
-		//zlog_info(temp_log_handler,"receive end link \n");
-		//receive_running = 0;
 		return 1;
 	}else if(type == 99){ // heart beat
 		//zlog_info(temp_log_handler," ---- heart beat \n");
@@ -93,6 +106,7 @@ int processMessage(const char* buf, int32_t length,int connfd){ // later use thr
 }
 
 void receive(int connfd){ // receive -- | messageLength(4 Byte) | type(4 Byte) | json file(messageLength - 4) | 
+	//zlog_info(temp_log_handler,"enter receive()\n");
     int n;
     int size = 0;
     int totalByte = 0;
@@ -102,9 +116,12 @@ void receive(int connfd){ // receive -- | messageLength(4 Byte) | type(4 Byte) |
     char* pCopy = NULL;
 
     n = recv(connfd, temp_receBuffer, BUFFER_SIZE,0);
+	//zlog_info(temp_log_handler,"after recv() : , n = %d \n" , n);
     if(n<=0){
-		if(n < 0)
-			zlog_info(temp_log_handler,"recv() n <0 , n = %d \n" , n);
+		//if(n < 0)
+		//	zlog_info(temp_log_handler,"recv() n < 0 , n = %d \n" , n);
+		//if(n == 0)
+		//	zlog_info(temp_log_handler,"recv() n = 0\n");
 		return;
     }
     size = n;
@@ -163,7 +180,7 @@ receive_thread(void* args){
     while(receive_running == 1){
     	receive(connfd);
     }
-	freeHandleProcess();
+	//freeHandleProcess();
     zlog_info(temp_log_handler,"end Exit receive_thread()\n");
 
 }
@@ -215,12 +232,15 @@ int initNet(int *fd,zlog_category_t* log_handler){
 		}else{
 			zlog_info(temp_log_handler," -------------------accept new client , connfd = %d \n", connfd);
 			*fd = connfd;
-			gLinkfd = connfd;		
-			initHandleProcess(); // init memory and thread variable		
+			gLinkfd = connfd;
+		
+			initHandleProcess(connfd); // init memory and thread variable		
 			receive_running = 1;
 			int ret = pthread_create(para_t->thread_pid, NULL, receive_thread, (void*)(fd));
 			// call timer
-			StartTimer();	
+			StartTimer();
+			pthread_join(*(para_t->thread_pid), NULL);
+			reset_system();	
 		}
 	}
 	return 0;
@@ -241,10 +261,15 @@ int sendToPc(int connfd, char* send_buf, int send_buf_len){
 
 void stopReceThread(){
 	zlog_info(temp_log_handler,"enter stopReceThread() \n");
-    pthread_cancel(*para_t->thread_pid);
-    pthread_join(*para_t->thread_pid, NULL); //wait the thread stopped
 	freeHandleProcess();
+	zlog_info(temp_log_handler,"stopReceThread() \n");
+}
+
+void reset_system(){
+    //pthread_cancel(*para_t->thread_pid);
+    //pthread_join(*(para_t->thread_pid), NULL); //wait the thread stopped
 	// stop and close csi
+	zlog_info(temp_log_handler,"enter reset_system() \n");
 	zlog_info(temp_log_handler,"gw_stopcsi() \n");
 	gw_stopcsi();
 	zlog_info(temp_log_handler,"stopReceThread : gw_close_csi() \n");
@@ -252,6 +277,6 @@ void stopReceThread(){
 	// close rssi
 	zlog_info(temp_log_handler,"close_rssi() \n"); 
 	close_rssi();
-	zlog_info(temp_log_handler,"stopReceThread() \n");
+	zlog_info(temp_log_handler,"------------------------- reset_system() \n");
 }
 

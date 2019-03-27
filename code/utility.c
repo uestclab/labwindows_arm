@@ -29,6 +29,7 @@ void destoryThreadPara(para_thread* para_t){
     free(para_t->cond_);
     free(para_t->mutex_);
     free(para_t->thread_pid);
+	para_t = NULL;
 }
 
 

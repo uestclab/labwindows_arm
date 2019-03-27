@@ -22,19 +22,7 @@ int *connect_fd = NULL;
 #define MAXSHAREBUF_SIZE 1024*60
 #define HEADROOM 8
 
-/* 
-
-typedef struct shareBufInfo{
-    char*       buf_;
-    int32_t 	len_;
-}shareBufInfo;
-
-struct timeval  
-{  
-__time_t tv_sec;        //Seconds.  
-__suseconds_t tv_usec;  //Microseconds.  
-}
-*/
+static int rssi_stat = 0;
 
 #define	MAX_RSSI_NO	60000
 struct rssi_priv{
@@ -70,6 +58,7 @@ void print_rssi_struct(int connfd, char* buf, int buf_len){
 	memcpy(shareInfo->buf_ + sizeof(int32_t) * 5, tmp_buf->rssi_buf, tmp_buf->rssi_buf_len);	
 	
 	int ret = sendToPc(connfd, shareInfo->buf_, length);
+	//zlog_info(broker_log_handler,"print_rssi_struct :  , buf_len = %d \n",buf_len);
 }
 
 int process_exception(char* buf, int buf_len, char *from, void* arg)
@@ -89,6 +78,7 @@ int process_exception(char* buf, int buf_len, char *from, void* arg)
 
 int initProcBroker(char *argv,int* fd,zlog_category_t* log_handler){
 	broker_log_handler = log_handler;
+	rssi_stat = 0;
 	int ret = init_broker(get_prog_name(argv), NULL, -1, NULL, NULL);
 	zlog_info(broker_log_handler,"get_prog_name(argv) = %s , ret = %d \n",get_prog_name(argv),ret);
 	if( ret != 0)
@@ -157,7 +147,7 @@ int inquiry_state_from(char *buf, int buf_len){
 
 // ---------- rssi ----------------
 int rssi_state_change(char *buf, int buf_len){
-	//printf("rssi json = %s \n",buf);
+	zlog_info(broker_log_handler,"rssi json = %s \n",buf);
 	int ret = -1;
 	char* stat_buf = NULL;
 	int stat_buf_len = 0;
@@ -170,13 +160,20 @@ int rssi_state_change(char *buf, int buf_len){
 	ret = dev_transfer(buf, buf_len, &stat_buf, &stat_buf_len, item->valuestring, -1);
 
 	if(ret == 0 && stat_buf_len > 0 && connect_fd != NULL){
-		zlog_info(broker_log_handler,"rssi return json = %s \n", stat_buf);
+		item = cJSON_GetObjectItem(root,"timer");
+		if(strcmp(item->valuestring,"0") == 0)
+			rssi_stat = 0;
+		else
+			rssi_stat = 1;
+		zlog_info(broker_log_handler,"rssi_stat = %d \n, rssi return json = %s \n", rssi_stat , stat_buf);
 		free(stat_buf);
 	}
 	cJSON_Delete(root);
 }
 
 void close_rssi(){
+	if(rssi_stat == 0)
+		return;
 	cJSON *root = cJSON_CreateObject();
 	cJSON_AddStringToObject(root, "dev", "/dev/i2c-0");
 	cJSON_AddStringToObject(root, "addr", "0x4a");

@@ -17,4 +17,6 @@ void receive_signal();
 
 void stopReceThread();
 
+void reset_system();
+
 #endif//PROCESS_H

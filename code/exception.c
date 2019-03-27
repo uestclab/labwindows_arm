@@ -11,6 +11,7 @@
 zlog_category_t * ex_log_handler = NULL;
 
 static int heart_beat = 0;
+static int timer_running = 0;
 
 para_thread* para_t_check = NULL;
 
@@ -40,35 +41,43 @@ void OnTimer(){
 
 void* thread_proc()
 {
-    while (1)
+	zlog_info(ex_log_handler,"Start Timer thread \n");
+    while (timer_running)
     {
 		setTimer(4,0); // 4s check
 		OnTimer();
     }
+	zlog_info(ex_log_handler,"Stop Timer thread \n");
 }
 
 void StartTimer()
 {
 	zlog_info(ex_log_handler,"StartTimer() \n");
+	timer_running = 1;
 	pthread_create(para_t_check->thread_pid, NULL, thread_proc, NULL);
 }
 
 void StopTimer()
 {
 	zlog_info(ex_log_handler,"StopTimer() \n");
-	pthread_exit(0);
+	timer_running = 0;
+	//pthread_exit(0);
 }
 
 void InitTimer(zlog_category_t * log_handler){
 	ex_log_handler = log_handler;
 	if(para_t_check == NULL)
 		para_t_check = newThreadPara();
+	heart_beat = 0;
+	timer_running = 0;
 	zlog_info(ex_log_handler,"InitTimer() \n");
 }
 
 void closeTimer(){
-	if(para_t_check != NULL)
+	if(para_t_check != NULL){
 		destoryThreadPara(para_t_check);
+		para_t_check = NULL;
+	}
 	ex_log_handler = NULL;
 }
 
