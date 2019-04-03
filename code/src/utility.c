@@ -141,28 +141,3 @@ int connect_check(char* eth)
 }
 
 
-void user_wait()
-{
-	int c;
-	printf("user_wait... ");
-	do
-	{
-		c = getchar();
-		if(c == 'g') break;
-	} while(c != '\n');
-}
-
-void delay(){
-	int i = 0,j = 0;
-	for(i = 0;i<50;i++){
-		for(j=0;j<50;j++){
-			int x = 0;
-		}
-	}
-}
-
-void stop(){
-	while(1){
-		;
-	}
-}

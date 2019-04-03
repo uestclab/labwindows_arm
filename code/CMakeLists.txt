@@ -24,7 +24,7 @@ if(${PUBLIC} STREQUAL "ON")
 
 elseif(${PUBLIC} STREQUAL "OFF")
     message(STATUS "start to build PC platform.")
-	add_definitions("-D USE_STUB")
+	add_definitions("-D PC_STUB")
 	link_directories("${PROJECT_SOURCE_DIR}/dependence/lib")
 endif(${PUBLIC} STREQUAL "ON")
 
@@ -38,15 +38,15 @@ SET(ROOT_PATH ".")
 
 include_directories("${PROJECT_SOURCE_DIR}/dependence")
 include_directories("${PROJECT_SOURCE_DIR}/dependence/include")
+include_directories("${PROJECT_SOURCE_DIR}/include")
+
+file(GLOB_RECURSE SOURCE_FILES "src/*.c")
+file(GLOB_RECURSE ALL_EXECUTABLES "devAdapter.c")
+
+add_executable(${PROJECT_NAME} ${ALL_EXECUTABLES} ${SOURCE_FILES})
 
 
-if(${PUBLIC} STREQUAL "ON") # cross complie
-	SET(SOURCE_FILES devAdapter.c process.c csiLoopMain.c utility.c procBroker.c exception.c)
-elseif(${PUBLIC} STREQUAL "OFF") # stub test on pc
-	SET(SOURCE_FILES devAdapter.c process.c stub.c utility.c)
-endif(${PUBLIC} STREQUAL "ON")
 
-add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 target_link_libraries(${PROJECT_NAME} cjson)
 target_link_libraries(${PROJECT_NAME} -pthread)
@@ -56,6 +56,18 @@ if(${PUBLIC} STREQUAL "ON")
 	target_link_libraries(${PROJECT_NAME} broker)
 	target_link_libraries(${PROJECT_NAME} mosquitto)
 endif(${PUBLIC} STREQUAL "ON")
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

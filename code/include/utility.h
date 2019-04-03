@@ -31,9 +31,5 @@ char *get_prog_name(char *argv);
 int connect_check(char* eth);
 
 
-void user_wait();
-void delay();
-void stop();
-
 
 #endif//UTILITY_H
