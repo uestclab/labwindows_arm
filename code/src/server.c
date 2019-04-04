@@ -296,7 +296,7 @@ int InitReceThread(g_receive_para** g_receive, g_msg_queue_para* g_msg_queue, in
 
 	gw_set_recv_timeout_mode(connfd);
 
-	gw_set_socket_buffer(connfd,handler);
+	//gw_set_socket_buffer(connfd,handler);
 
 	int ret = pthread_create((*g_receive)->para_t->thread_pid, NULL, receive_thread, (void*)(*g_receive));
     if(ret != 0){
