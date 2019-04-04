@@ -9,23 +9,19 @@ void timerout_cb(g_msg_queue_para* g_msg_queue){
 	data.msg_len = 0;
 	postMsgQueue(&data,g_msg_queue);
 }
-/*
-void reset_system(){
-	// stop and close csi
-	zlog_info(temp_log_handler,"enter reset_system() \n");
-	zlog_info(temp_log_handler,"gw_stopcsi() \n");
-	gw_stopcsi();
-	zlog_info(temp_log_handler,"stopReceThread : gw_close_csi() \n");
-	gw_closecsi();
-	// close rssi
-	zlog_info(temp_log_handler,"close_rssi() \n"); 
-	close_rssi();
-	zlog_info(temp_log_handler,"------------------------- reset_system() \n");
+
+	uint32_t           rcv_cnt;  // debug counter
+	uint32_t           send_cnt; // debug counter
+
+void display(g_server_para* g_server){
+	zlog_info(g_server->log_handler,"  ---------------- display () --------------------------\n");
+	zlog_info(g_server->log_handler," g_receive->send_cnt = %u ", g_server->g_receive->send_cnt);
+	zlog_info(g_server->log_handler," g_receive->rcv_cnt = %u ", g_server->g_receive->rcv_cnt);
+	zlog_info(g_server->log_handler,"  ---------------- end display () ----------------------\n");
 }
-*/
 
 void eventLoop(g_server_para* g_server, g_msg_queue_para* g_msg_queue, g_timer_para* g_timer, 
-		g_broker_para* g_broker, zlog_category_t* zlog_handler)
+		g_broker_para* g_broker, g_csi_para* g_csi, zlog_category_t* zlog_handler)
 {
 	while(1){
 		zlog_info(zlog_handler,"wait getdata ----- \n");
@@ -63,26 +59,70 @@ void eventLoop(g_server_para* g_server, g_msg_queue_para* g_msg_queue, g_timer_p
 			case MSG_TIMEOUT:
 			{
 				zlog_info(zlog_handler," ---------------- EVENT : MSG_TIMEOUT: msg_number = %d",getData->msg_number);
-				if(g_server->waiting == STATE_DISCONNECTED)
+				if(g_server->waiting == STATE_DISCONNECTED){
+					display(g_server);
 					break;
+				}
 				if(g_server->g_receive->connected == 1){
 					g_server->g_receive->connected = 0;
+					display(g_server);
 				}else{
 					zlog_info(zlog_handler," ------may be disconnect ----disconnect_cnt = %d",g_server->g_receive->disconnect_cnt);
-					if(g_server->g_receive->disconnect_cnt == 2){
+					if(g_server->g_receive->disconnect_cnt == 1){
 						//confirm disconnect , then stop and clear rece thread
 						stopReceThread(g_server);
-						zlog_info(zlog_handler,"############# confirm disconnect , then stop and clear receive thread");
+						//zlog_info(zlog_handler,"############# confirm disconnect , then stop and clear receive thread");
 					}
 					g_server->g_receive->disconnect_cnt++;
 				}
 				break;
 			}
+			case MSG_RECEIVE_THREAD_CLOSED:
+			{
+				zlog_info(zlog_handler," --------------------------- EVENT : MSG_RECEIVE_THREAD_CLOSED: msg_number = %d",getData->msg_number);
+				
+				close_rssi(g_broker);
+				gw_stopcsi(g_csi);
+				
+				break;
+			}
 			case MSG_RECEIVED_HEART_BEAT:
 			{
-				g_server->g_receive->connected = 1;
 				zlog_info(zlog_handler," ---------------- EVENT : MSG_RECEIVED_HEART_BEAT: msg_number = %d",getData->msg_number);
+
+				g_server->g_receive->connected = 1;
+
 				break;
+			}
+			case MSG_CLOSE_LINK_REQUEST:
+			{				
+				zlog_info(zlog_handler," ---------------- EVENT : MSG_CLOSE_LINK_REQUEST: msg_number = %d",getData->msg_number);
+				
+				stopReceThread(g_server);
+
+				break;				
+			}
+			case MSG_STOP_CSI:
+			{
+				zlog_info(zlog_handler," ---------------- EVENT : MSG_STOP_CSI: msg_number = %d",getData->msg_number);
+				
+				gw_stopcsi(g_csi);
+
+				break;
+			}
+			case MSG_START_CSI:
+			{
+				zlog_info(zlog_handler," ---------------- EVENT : MSG_START_CSI: msg_number = %d",getData->msg_number);
+				
+				gw_startcsi(g_csi);
+
+				break;			
+			}
+			case MSG_CSI_SEND_ERROR:
+			{
+				zlog_info(zlog_handler," ---------------- EVENT : MSG_CSI_SEND_ERROR: msg_number = %d",getData->msg_number);
+
+				break;	
 			}
 			default:
 				break;

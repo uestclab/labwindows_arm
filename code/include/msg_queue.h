@@ -17,10 +17,23 @@
 #define MAX_TEXT 2048
 
 // msg
+// post from server thread : runServer()
 #define MSG_ACCEPT_NEW_CLIENT          10
+// post from receiver thread : processMessage()
 #define MSG_INQUIRY_STATE              11
 #define MSG_RECEIVED_HEART_BEAT        12
 #define MSG_RSSI_STATE_CHANGE          13
+#define MSG_START_CSI                  14
+#define MSG_STOP_CSI                   15
+#define MSG_CLOSE_LINK_REQUEST         16
+
+// post from receiver thread : exit thread
+#define MSG_RECEIVE_THREAD_CLOSED      17
+
+// post from csi_handler : csi_callback
+#define MSG_CSI_SEND_ERROR             18
+
+// post from timer thread call back
 #define MSG_TIMEOUT                    20
 
 // system state 

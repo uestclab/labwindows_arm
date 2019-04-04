@@ -23,6 +23,39 @@
 
 
 // --------------
+void gw_set_socket_buffer(int sock, zlog_category_t* handler){
+	int err = -1;
+	int snd_size = 0;
+	int rcv_size = 0;
+	socklen_t optlen;
+
+	optlen = sizeof(snd_size); 
+	err = getsockopt(sock, SOL_SOCKET, SO_SNDBUF, &snd_size, &optlen); 
+	optlen = sizeof(rcv_size); 
+	err = getsockopt(sock, SOL_SOCKET, SO_RCVBUF, &rcv_size, &optlen); 
+	zlog_info(handler," before gw_set_socket_buffer");
+	zlog_info(handler," send buf size = : %d ",snd_size);
+	zlog_info(handler," rcv buf size = : %d ",rcv_size);
+
+	snd_size = 10*1024;
+	optlen = sizeof(snd_size); 
+	err = setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &snd_size, optlen);
+
+	rcv_size = 10*1024;
+	optlen = sizeof(rcv_size); 
+	err = setsockopt(sock,SOL_SOCKET,SO_RCVBUF, (char *)&rcv_size, optlen);
+
+	snd_size = 0;
+	rcv_size = 0;
+	optlen = sizeof(snd_size); 
+	err = getsockopt(sock, SOL_SOCKET, SO_SNDBUF, &snd_size, &optlen); 
+	optlen = sizeof(rcv_size); 
+	err = getsockopt(sock, SOL_SOCKET, SO_RCVBUF, &rcv_size, &optlen); 
+	zlog_info(handler," after gw_set_socket_buffer");
+	zlog_info(handler," send buf size = : %d ",snd_size);
+	zlog_info(handler," rcv buf size = : %d ",rcv_size);
+}
+
 
 void gw_set_non_blocking_mode(int sock)
 {
@@ -50,19 +83,17 @@ void postMsg(long int msg_type, char *buf, int buf_len, g_receive_para* g_receiv
 int processMessage(const char* buf, int32_t length,g_receive_para* g_receive){
 	int type = myNtohl(buf + 4);
 	char* jsonfile = buf + sizeof(int32_t) + sizeof(int32_t);
-	if(type == 4){
-		//initCstNet();
+	if(type == 4){ // open csi
+		zlog_info(g_receive->log_handler,"receive : open csi request");
 	}else if(type == 99){ // heart beat
-		//zlog_info(temp_log_handler," ---- heart beat \n");
 		postMsg(MSG_RECEIVED_HEART_BEAT,NULL,0,g_receive);
-	}else if(type == 5){
-		//gw_stopcsi();
-		//gw_closecsi();
+	}else if(type == 5){ // close link button : stop
+		postMsg(MSG_CLOSE_LINK_REQUEST,NULL,0,g_receive);
 		zlog_info(g_receive->log_handler,"receive : %s\n",jsonfile);
-	}else if(type == 7){
-		//gw_startcsi();
-	}else if(type == 8){
-		//gw_stopcsi();
+	}else if(type == 7){ //gw_startcsi();
+		postMsg(MSG_START_CSI,NULL,0,g_receive);
+	}else if(type == 8){ //gw_stopcsi();
+		postMsg(MSG_STOP_CSI,NULL,0,g_receive);
 	}else if(type == 1){ // json
 		postMsg(MSG_INQUIRY_STATE,jsonfile,length-4,g_receive);
 		//inquiry_state_from(jsonfile,length-4);	
@@ -84,12 +115,13 @@ void receive(g_receive_para* g_receive){
 
     n = recv(g_receive->connfd, temp_receBuffer, BUFFER_SIZE,0);
     if(n<=0){
-		if(n < 0)
-			zlog_info(g_receive->log_handler,"recv() n < 0 , n = %d \n" , n);
-		if(n == 0)
-			zlog_info(g_receive->log_handler,"recv() n = 0\n");
+		//if(n < 0)
+		//	zlog_info(g_receive->log_handler,"recv() n < 0 , n = %d \n" , n);
+		//if(n == 0)
+		//	zlog_info(g_receive->log_handler,"recv() n = 0\n");
 		return;
     }
+	g_receive->rcv_cnt = g_receive->rcv_cnt + 1;
     size = n;
 	
     pStart = temp_receBuffer - g_receive->gMoreData_;
@@ -140,9 +172,11 @@ int getRunningState(g_receive_para* g_receive, int value){
 	if(value == 1){
 		zlog_info(g_receive->log_handler,"g_receive->receive_running = 0");
 		g_receive->receive_running = 0;
+		pthread_mutex_unlock(g_receive->para_t_cancel->mutex_); // note that: pthread_mutex_unlock before return !!!!! 
 		return 0;
 	}
 	int ret = g_receive->receive_running;
+	//zlog_info(g_receive->log_handler,"getRunningState ret = %d\n",ret);
 	pthread_mutex_unlock(g_receive->para_t_cancel->mutex_);
 	return ret;
 }
@@ -155,6 +189,7 @@ void* receive_thread(void* args){
     while(getRunningState(g_receive,0) == 1){
     	receive(g_receive);
     }
+	postMsg(MSG_RECEIVE_THREAD_CLOSED,NULL,0,g_receive); // pose MSG_RECEIVE_THREAD_CLOSED
     zlog_info(g_receive->log_handler,"end Exit receive_thread()\n");
 }
 
@@ -165,6 +200,7 @@ int sendToPc(g_receive_para* g_receive, char* send_buf, int send_buf_len){
 	if(ret != send_buf_len){
 		zlog_error(g_receive->log_handler,"Error in client send socket: send length = %d , expected length = %d", ret , send_buf_len);
 	}
+	g_receive->send_cnt = g_receive->send_cnt + 1;
 	pthread_mutex_unlock(g_receive->para_t->mutex_);
 	return ret;
 }
@@ -255,8 +291,12 @@ int InitReceThread(g_receive_para** g_receive, g_msg_queue_para* g_msg_queue, in
 	(*g_receive)->sendMessage 	  = (char*)malloc(BUFFER_SIZE); // gSendMessage
 	(*g_receive)->recvbuf 		  = (char*)malloc(BUFFER_SIZE); // gReceBuffer_
 	(*g_receive)->log_handler 	  = handler;
+	(*g_receive)->rcv_cnt         = 0;
+	(*g_receive)->send_cnt        = 0;
 
 	gw_set_recv_timeout_mode(connfd);
+
+	gw_set_socket_buffer(connfd,handler);
 
 	int ret = pthread_create((*g_receive)->para_t->thread_pid, NULL, receive_thread, (void*)(*g_receive));
     if(ret != 0){
@@ -288,13 +328,16 @@ void freeReceThread(g_server_para* g_server){
 		g_receive->sendMessage = NULL;
 	}
 	g_receive->gMoreData_ = 0;
+	destoryThreadPara(g_receive->para_t);
+	destoryThreadPara(g_receive->para_t_cancel);
 	close(g_receive->connfd);
+	g_receive->connfd = -1;
 	zlog_info(g_receive->log_handler,"freeReceThread() \n");
 	g_receive->connected = 0;
 	g_receive->disconnect_cnt = 0;
 }
 
-void stopReceThread(g_server_para* g_server){
+void stopReceThread(g_server_para* g_server){ // only main thread call through event 
 	zlog_info(g_server->log_handler,"enter stopReceThread() \n");
 	freeReceThread(g_server);
 	zlog_info(g_server->log_handler,"stopReceThread() \n");

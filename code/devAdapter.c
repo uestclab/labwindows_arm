@@ -11,9 +11,8 @@
 #include "event_process.h"
 #include "gw_timer.h"
 #include "procBroker.h"
+#include "csi_handler.h"
 
-//#ifndef PC_STUB
-//#endif
 
 zlog_category_t * serverLog(const char* path){
 	int rc;
@@ -75,7 +74,7 @@ int main(int argc,char** argv)
 		return 0;
 	}
 
-	/* */
+	/* broker handler */
 	g_broker_para* g_broker = NULL;
 	state = initProcBroker(argv[0], &g_broker, g_server, zlog_handler);
 	if(state != 0 || g_server == NULL){
@@ -83,27 +82,16 @@ int main(int argc,char** argv)
 		return 0;
 	}
 
-	eventLoop(g_server, g_msg_queue, g_timer, g_broker, zlog_handler);
-
-	/* 
-
-	InitTimer(zlog_handler);
-	init_cst_state(zlog_handler);
-	int connfd = -1;
-
-	int ret = initProcBroker(argv[0],&connfd,zlog_handler);
-	if(ret != 0){
-		zlog_info(zlog_handler,"initProcBroker fail ... end process\n");
-		closeServerLog();
+	/* csi_handler */
+	g_csi_para* g_csi = NULL;
+	state = init_cst_state(&g_csi, g_server, g_msg_queue, zlog_handler);
+	if(state != 0 || g_csi == NULL){
+		zlog_info(zlog_handler,"No init_cst_state created \n");
 		return 0;
 	}
 
-	ret = initNet(&connfd,zlog_handler);
+	eventLoop(g_server, g_msg_queue, g_timer, g_broker, g_csi, zlog_handler);
 
-	destoryProcBroker();
-	zlog_info(zlog_handler,"devAdapter end main\n");
-	closeTimer();
-	*/
 	closeServerLog();
     return 0;
 }

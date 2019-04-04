@@ -53,6 +53,7 @@ int process_exception(char* buf, int buf_len, char *from, void* arg)
 	if(g_broker_temp->g_server->g_receive->connfd == -1)
 		return -1;
 	if(strcmp(from,"mon/all/pub/system_stat") == 0){
+		zlog_info(g_broker_temp->log_handler,"process_exception: mon/all/pub/system_stat");
 		sendStateInquiry(g_broker_temp->g_server->g_receive,buf,buf_len+1,41);
 	}else if(strcmp(from,"rf/all/pub/rssi") == 0){ 
 		print_rssi_struct(g_broker_temp,buf,buf_len); // send rssi struct stream to pc	
