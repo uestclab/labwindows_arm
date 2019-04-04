@@ -127,6 +127,7 @@ void eventLoop(g_server_para* g_server, g_msg_queue_para* g_msg_queue, g_timer_p
 			default:
 				break;
 		}// end switch
+		free(getData);
 	}// end while(1)
 }
 
