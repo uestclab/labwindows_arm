@@ -8,20 +8,20 @@
 #include "server.h"
 #include "cJSON.h"
 #include "zlog.h"
-//int sendToPc(g_receive_para* g_receive, char* send_buf, int send_buf_len);
+//int sendToPc(g_server_para* g_server, char* send_buf, int send_buf_len, int device);
 #define MAXSHAREBUF_SIZE 1024*60
 #define HEADROOM 8
 
 g_broker_para* g_broker_temp = NULL;
 
-void sendStateInquiry(g_receive_para* g_receive, char* stat_buf, int stat_buf_len, int type){
+void sendStateInquiry(g_server_para* g_server, char* stat_buf, int stat_buf_len, int type){
 	int length = stat_buf_len + 4 + 4;
 	char* temp_buf = malloc(length);
 	// htonl ?
 	*((int32_t*)temp_buf) = (stat_buf_len + sizeof(int32_t));
 	*((int32_t*)(temp_buf+ sizeof(int32_t))) = (type); // 1--rssi , 2--CSI , 3--json: 31 -- reg_json
 	memcpy(temp_buf + HEADROOM,stat_buf,stat_buf_len);
-	int ret = sendToPc(g_receive, temp_buf, length);
+	int ret = sendToPc(g_server, temp_buf, length, type);
 	free(temp_buf);
 }
 
@@ -43,7 +43,7 @@ void print_rssi_struct(g_broker_para* g_broker, char* buf, int buf_len){
 	*((int32_t*)(shareInfo->buf_+ sizeof(int32_t) * 4)) = tmp_buf->rssi_buf_len;
 	memcpy(shareInfo->buf_ + sizeof(int32_t) * 5, tmp_buf->rssi_buf, tmp_buf->rssi_buf_len);	
 	
-	int ret = sendToPc(g_broker->g_server->g_receive, shareInfo->buf_, length);
+	int ret = sendToPc(g_broker->g_server, shareInfo->buf_, length, 1);
 	//zlog_info(g_broker->log_handler,"print_rssi_struct :  , buf_len = %d \n",buf_len);
 }
 
@@ -54,7 +54,7 @@ int process_exception(char* buf, int buf_len, char *from, void* arg)
 		return -1;
 	if(strcmp(from,"mon/all/pub/system_stat") == 0){
 		zlog_info(g_broker_temp->log_handler,"process_exception: mon/all/pub/system_stat");
-		sendStateInquiry(g_broker_temp->g_server->g_receive,buf,buf_len+1,41);
+		sendStateInquiry(g_broker_temp->g_server,buf,buf_len+1,41);
 	}else if(strcmp(from,"rf/all/pub/rssi") == 0){ 
 		print_rssi_struct(g_broker_temp,buf,buf_len); // send rssi struct stream to pc	
 	}
@@ -79,13 +79,17 @@ int initProcBroker(char *argv, g_broker_para** g_broker, g_server_para* g_server
 	if( ret != 0)
 		return -2;
 
-	ret = register_callback("all", process_exception, "#");
-	if(ret != 0){
-		zlog_error(handler,"register_callback error in initBroker\n");
-		return -1;
-	}
 	g_broker_temp = *g_broker;
 	zlog_info(handler,"end initProcBroker()\n");
+	return 0;
+}
+
+int broker_register_callback(g_broker_para* g_broker){
+	int ret = register_callback("all", process_exception, "#");
+	if(ret != 0){
+		zlog_error(g_broker->log_handler,"register_callback error in initBroker\n");
+		return -1;
+	}
 	return 0;
 }
 
@@ -105,7 +109,6 @@ void printbuf_temp(char* buf,int buf_len,g_broker_para* g_broker){
 
 int inquiry_state_from(char *buf, int buf_len, g_broker_para* g_broker){
 	g_receive_para* g_receive = g_broker->g_server->g_receive;
-	int connect_fd = g_receive->connfd;
 	int ret = -1;
 	char* stat_buf = NULL;
 	int stat_buf_len = 0;
@@ -123,17 +126,17 @@ int inquiry_state_from(char *buf, int buf_len, g_broker_para* g_broker){
 	//zlog_info(g_broker->log_handler,"item_type = %s , \n",item_type->valuestring);
 	int type = 0;
 
-	if(ret == 0 && stat_buf_len > 0 && connect_fd != -1){
+	if(ret == 0 && stat_buf_len > 0 && g_receive != NULL){
 		if(strcmp(item->valuestring,"mon") == 0){ // system monitor State
-			sendStateInquiry(g_receive,stat_buf,stat_buf_len+1,41); 
+			sendStateInquiry(g_broker->g_server,stat_buf,stat_buf_len+1,41); 
 		}else if(strcmp(item->valuestring,"gpio") == 0){ // gpio State
-			sendStateInquiry(g_receive,stat_buf,stat_buf_len+1,51);
+			sendStateInquiry(g_broker->g_server,stat_buf,stat_buf_len+1,51);
 		}else if(strcmp(item->valuestring,"reg") == 0){ // reg state
 			if(strcmp(item_type->valuestring,"fpga") == 0)
 				type = 32;
 			else
 				type = 31;
-			sendStateInquiry(g_receive,stat_buf,stat_buf_len+1,type);
+			sendStateInquiry(g_broker->g_server,stat_buf,stat_buf_len+1,type);
 		}
 		//printbuf_temp(stat_buf,stat_buf_len,g_broker);
 		free(stat_buf);
@@ -146,7 +149,6 @@ int inquiry_state_from(char *buf, int buf_len, g_broker_para* g_broker){
 
 // ---------- rssi ----------------
 int rssi_state_change(char *buf, int buf_len, g_broker_para* g_broker){
-	int connect_fd = g_broker->g_server->g_receive->connfd;
 	zlog_info(g_broker->log_handler,"rssi json = %s \n",buf);
 	int ret = -1;
 	char* stat_buf = NULL;
@@ -159,7 +161,7 @@ int rssi_state_change(char *buf, int buf_len, g_broker_para* g_broker){
 
 	ret = dev_transfer(buf, buf_len, &stat_buf, &stat_buf_len, item->valuestring, -1);
 
-	if(ret == 0 && stat_buf_len > 0 && connect_fd != -1){
+	if(ret == 0 && stat_buf_len > 0 && g_broker->g_server->g_receive != NULL){
 		item = cJSON_GetObjectItem(root,"timer");
 		if(strcmp(item->valuestring,"0") == 0)
 			g_broker->rssi_state = 0;

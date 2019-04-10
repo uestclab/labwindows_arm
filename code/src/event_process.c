@@ -10,8 +10,6 @@ void timerout_cb(g_msg_queue_para* g_msg_queue){
 	postMsgQueue(&data,g_msg_queue);
 }
 
-	uint32_t           rcv_cnt;  // debug counter
-	uint32_t           send_cnt; // debug counter
 
 void display(g_server_para* g_server){
 	zlog_info(g_server->log_handler,"  ---------------- display () --------------------------\n");
@@ -24,7 +22,6 @@ void eventLoop(g_server_para* g_server, g_msg_queue_para* g_msg_queue, g_timer_p
 		g_broker_para* g_broker, g_csi_para* g_csi, zlog_category_t* zlog_handler)
 {
 	while(1){
-		zlog_info(zlog_handler,"wait getdata ----- \n");
 		struct msg_st* getData = getMsgQueue(g_msg_queue);
 		if(getData == NULL)
 			continue;
@@ -33,6 +30,13 @@ void eventLoop(g_server_para* g_server, g_msg_queue_para* g_msg_queue, g_timer_p
 			case MSG_ACCEPT_NEW_CLIENT:
 			{
 				zlog_info(zlog_handler," ---------------- EVENT : MSG_ACCEPT_NEW_CLIENT: msg_number = %d",getData->msg_number);
+
+				if(g_server->enableCallback == 0){
+					zlog_info(zlog_handler," ---------------- EVENT : MSG_ACCEPT_NEW_CLIENT: register callback \n");
+					broker_register_callback(g_broker);
+					cst_register_callback(g_csi);
+					g_server->enableCallback = 1;
+				}
 
 				if(g_server->hasTimer == 0){
 					Start_Timer(timerout_cb, 4, 0, g_timer);
@@ -60,20 +64,20 @@ void eventLoop(g_server_para* g_server, g_msg_queue_para* g_msg_queue, g_timer_p
 			{
 				zlog_info(zlog_handler," ---------------- EVENT : MSG_TIMEOUT: msg_number = %d",getData->msg_number);
 				if(g_server->waiting == STATE_DISCONNECTED){
-					display(g_server);
+					//display(g_server);
 					break;
 				}
 				if(g_server->g_receive->connected == 1){
 					g_server->g_receive->connected = 0;
 					display(g_server);
 				}else{
-					zlog_info(zlog_handler," ------may be disconnect ----disconnect_cnt = %d",g_server->g_receive->disconnect_cnt);
-					if(g_server->g_receive->disconnect_cnt == 1){
-						//confirm disconnect , then stop and clear rece thread
-						stopReceThread(g_server);
-						//zlog_info(zlog_handler,"############# confirm disconnect , then stop and clear receive thread");
-					}
-					g_server->g_receive->disconnect_cnt++;
+					zlog_info(zlog_handler," ------ close_rssi() and gw_stopcsi() ---- \n");
+
+					close_rssi(g_broker);
+					gw_stopcsi(g_csi);
+					
+					stopReceThread(g_server);
+
 				}
 				break;
 			}
@@ -81,14 +85,11 @@ void eventLoop(g_server_para* g_server, g_msg_queue_para* g_msg_queue, g_timer_p
 			{
 				zlog_info(zlog_handler," --------------------------- EVENT : MSG_RECEIVE_THREAD_CLOSED: msg_number = %d",getData->msg_number);
 				
-				close_rssi(g_broker);
-				gw_stopcsi(g_csi);
-				
 				break;
 			}
 			case MSG_RECEIVED_HEART_BEAT:
 			{
-				zlog_info(zlog_handler," ---------------- EVENT : MSG_RECEIVED_HEART_BEAT: msg_number = %d",getData->msg_number);
+				//zlog_info(zlog_handler," ---------------- EVENT : MSG_RECEIVED_HEART_BEAT: msg_number = %d",getData->msg_number);
 
 				g_server->g_receive->connected = 1;
 
@@ -97,7 +98,10 @@ void eventLoop(g_server_para* g_server, g_msg_queue_para* g_msg_queue, g_timer_p
 			case MSG_CLOSE_LINK_REQUEST:
 			{				
 				zlog_info(zlog_handler," ---------------- EVENT : MSG_CLOSE_LINK_REQUEST: msg_number = %d",getData->msg_number);
-				
+
+				close_rssi(g_broker);
+				gw_stopcsi(g_csi);				
+
 				stopReceThread(g_server);
 
 				break;				

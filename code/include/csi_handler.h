@@ -14,6 +14,7 @@ typedef struct g_csi_para{
 }g_csi_para;
 
 int init_cst_state(g_csi_para** g_csi, g_server_para* g_server, g_msg_queue_para*  g_msg_queue, zlog_category_t* handler);
+int cst_register_callback(g_csi_para* g_csi);
 void gw_startcsi(g_csi_para* g_csi);
 void gw_stopcsi(g_csi_para* g_csi);
 void gw_closecsi(g_csi_para* g_csi);

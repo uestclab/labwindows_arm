@@ -12,6 +12,7 @@
 #include "gw_timer.h"
 #include "procBroker.h"
 #include "csi_handler.h"
+#include "countDownLatch.h"
 
 
 zlog_category_t * serverLog(const char* path){
@@ -44,11 +45,15 @@ void closeServerLog(){
 
 int main(int argc,char** argv)
 {
-	zlog_category_t *zlog_handler = serverLog("/run/media/mmcblk1p1/etc/zlog_default.conf");
+	//zlog_category_t *zlog_handler = serverLog("/run/media/mmcblk1p1/etc/zlog_default.conf");
+	zlog_category_t *zlog_handler = serverLog("./zlog_default.conf");
 
 	zlog_info(zlog_handler,"start devAdapter process\n");
 
-	/* */
+	/* countDownLatch */
+	g_cntDown_para* g_cntDown = NULL;
+	int state = initCountDown(&g_cntDown, 1, zlog_handler);
+	
 	
 	/* msg_queue */
 	g_msg_queue_para* g_msg_queue = createMsgQueue(zlog_handler);
@@ -60,7 +65,7 @@ int main(int argc,char** argv)
 
 	/* timer thread */
 	g_timer_para* g_timer = NULL;
-	int state = InitTimerThread(&g_timer, g_msg_queue, zlog_handler);
+	state = InitTimerThread(&g_timer, g_msg_queue, g_cntDown, zlog_handler);
 	if(state == -1 || g_timer == NULL){
 		zlog_info(zlog_handler,"No Timer created \n");
 		return 0;
@@ -68,11 +73,16 @@ int main(int argc,char** argv)
 
 	/* server thread */
 	g_server_para* g_server = NULL;
-	state = InitServerThread(&g_server, g_msg_queue, zlog_handler);
+	state = InitServerThread(&g_server, g_msg_queue, g_cntDown, zlog_handler);
 	if(state == -1 || g_server == NULL){
 		zlog_info(zlog_handler,"No server thread created \n");
 		return 0;
 	}
+	//zlog_info(zlog_handler,"begin counterWait ...\n");
+	//counterWait(g_cntDown);//wait for the three sub-threads end;
+	//g_server->enableCallback = 1;
+	//zlog_info(zlog_handler,"End counterWait ...\n");
+	
 
 	/* broker handler */
 	g_broker_para* g_broker = NULL;

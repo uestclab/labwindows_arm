@@ -6,11 +6,13 @@
 #include "utility.h"
 
 #include "msg_queue.h"
+#include "countDownLatch.h"
 
 typedef void (*timercb_func)(g_msg_queue_para* g_msg_queue); 
 
 typedef struct g_timer_para{
 	g_msg_queue_para*  g_msg_queue;
+	g_cntDown_para*    g_cntDown;
 	timercb_func       timer_cb;
 	int                seconds;
 	int                mseconds;       
@@ -20,7 +22,7 @@ typedef struct g_timer_para{
 }g_timer_para;
 
 
-int InitTimerThread(g_timer_para** g_timer, g_msg_queue_para* g_msg_queue, zlog_category_t* handler);
+int InitTimerThread(g_timer_para** g_timer, g_msg_queue_para* g_msg_queue, g_cntDown_para* g_cntDown, zlog_category_t* handler);
 void close_Timer(g_timer_para* g_timer);
 void Start_Timer(timercb_func timer_cb, int sec, int msec, g_timer_para* g_timer);
 

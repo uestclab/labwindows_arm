@@ -60,7 +60,7 @@ void Start_Timer(timercb_func timer_cb, int sec, int msec, g_timer_para* g_timer
 
 
 
-int InitTimerThread(g_timer_para** g_timer, g_msg_queue_para* g_msg_queue, zlog_category_t* handler){
+int InitTimerThread(g_timer_para** g_timer, g_msg_queue_para* g_msg_queue, g_cntDown_para* g_cntDown, zlog_category_t* handler){
 	zlog_info(handler,"InitTimerThread()");
 	*g_timer = (g_timer_para*)malloc(sizeof(struct g_timer_para));
 	(*g_timer)-> timer_cb = NULL;
@@ -69,6 +69,7 @@ int InitTimerThread(g_timer_para** g_timer, g_msg_queue_para* g_msg_queue, zlog_
 	(*g_timer)-> mseconds  = 0;
 	(*g_timer)-> para_t = newThreadPara();
 	(*g_timer)->g_msg_queue = g_msg_queue;
+	(*g_timer)->g_cntDown   = g_cntDown;
 	(*g_timer)-> log_handler = handler;
 	int ret = pthread_create((*g_timer)->para_t->thread_pid, NULL, timer_thread, (void*)(*g_timer));
     if(ret != 0){

@@ -12,6 +12,7 @@
 
 #include "server.h"
 #include "msg_queue.h"
+#include "countDownLatch.h"
 
 
 #include "cJSON.h"
@@ -194,7 +195,15 @@ void* receive_thread(void* args){
 }
 
 // send thread safe
-int sendToPc(g_receive_para* g_receive, char* send_buf, int send_buf_len){
+int sendToPc(g_server_para* g_server, char* send_buf, int send_buf_len, int device){
+	g_receive_para* g_receive = g_server->g_receive;
+	if(g_server->waiting == STATE_DISCONNECTED){
+		zlog_error(g_server->log_handler,"sendToPc , STATE_DISCONNECTED !!!!!!!!!!!! ------ device = %d ", device);
+		return 0 ;
+	}else if(g_receive == NULL){
+		zlog_error(g_server->log_handler,"sendToPc , g_receive == NULL !!!!!!!!!!!! ------ device = %d ", device);
+		return 0 ;
+	}
 	pthread_mutex_lock(g_receive->para_t->mutex_);
 	int ret = send(g_receive->connfd,send_buf,send_buf_len,0);
 	if(ret != send_buf_len){
@@ -239,31 +248,33 @@ void* runServer(void* args){
 		zlog_error(g_server->log_handler,"server thread failure\n");
 		return NULL;
 	}
-
+	g_server->waiting = STATE_STARTUP;
     zlog_info(g_server->log_handler,"========waiting for client's request========\n");
 	while(1){
 		int connfd = -1;
-		g_server->waiting = STATE_STARTUP;
 		if( (connfd = accept(g_server->listenfd,(struct sockaddr*)NULL,NULL)) == -1 ){
 		    zlog_error(g_server->log_handler,"accept socket error: %s(errno: %d)\n",strerror(errno),errno);
 		}else{
 			zlog_info(g_server->log_handler," -------------------accept new client , connfd = %d \n", connfd);
-			g_server->waiting = STATE_CONNECTED;
 			g_receive_para* g_receive = NULL;
 			int ret = InitReceThread(&g_receive, g_server->g_msg_queue, connfd, g_server->log_handler);
 			g_server->g_receive = g_receive;
+			g_server->waiting = STATE_CONNECTED;
 			postMsg(MSG_ACCEPT_NEW_CLIENT,NULL,0,g_receive);
 		}
 		zlog_info(g_server->log_handler,"========waiting for client's request========\n");
 	}
 }
 
-int InitServerThread(g_server_para** g_server, g_msg_queue_para* g_msg_queue, zlog_category_t* handler){
+int InitServerThread(g_server_para** g_server, g_msg_queue_para* g_msg_queue, g_cntDown_para* g_cntDown, zlog_category_t* handler){
 	zlog_info(handler,"InitServerThread()");
 	*g_server = (g_server_para*)malloc(sizeof(struct g_server_para));
 	(*g_server)->waiting      = STATE_STARTUP;
     (*g_server)->listenfd     = 0;
 	(*g_server)->hasTimer     = 0;
+	(*g_server)->g_cntDown    = g_cntDown;
+	(*g_server)->enableCallback    = 0;
+	(*g_server)->csi_cnt      = 0;
 	(*g_server)->para_t       = newThreadPara();
 	(*g_server)->g_msg_queue  = g_msg_queue;
 	(*g_server)->g_receive    = NULL;
@@ -335,6 +346,8 @@ void freeReceThread(g_server_para* g_server){
 	zlog_info(g_receive->log_handler,"freeReceThread() \n");
 	g_receive->connected = 0;
 	g_receive->disconnect_cnt = 0;
+	free(g_receive);
+	g_server->g_receive = NULL;
 }
 
 void stopReceThread(g_server_para* g_server){ // only main thread call through event 

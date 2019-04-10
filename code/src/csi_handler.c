@@ -7,11 +7,22 @@
 int csi_callback(char* buf, int buf_len, void* arg)
 {
 	g_server_para* g_server = (g_server_para*)arg;
+
+	if(g_server->csi_cnt != 0){
+		g_server->csi_cnt = g_server->csi_cnt + 1;
+		g_server->csi_cnt = g_server->csi_cnt % 100;
+		return 0 ;
+	}
+
+	g_server->csi_cnt = g_server->csi_cnt + 1;
+	g_server->csi_cnt = g_server->csi_cnt % 100;
+
 	int messageLen = buf_len + 4 + 4;
 	// htonl ?
 	*((int32_t*)buf) = (buf_len + 4);
 	*((int32_t*)(buf+ sizeof(int32_t))) = (2); // 1--rssi , 2--CSI , 3--json
-	int ret = sendToPc(g_server->g_receive, buf, messageLen);
+	int ret = sendToPc(g_server, buf, messageLen,2);
+	/*
 	if(ret != messageLen){//postMsg MSG_CSI_SEND_ERROR
 		struct msg_st data;
 		data.msg_type = MSG_CSI_SEND_ERROR;
@@ -19,6 +30,7 @@ int csi_callback(char* buf, int buf_len, void* arg)
 		data.msg_len = 0;
 		postMsgQueue(&data,g_server->g_msg_queue);
 	}
+	*/
 	return 0;
 }
 
@@ -35,21 +47,23 @@ int init_cst_state(g_csi_para** g_csi, g_server_para* g_server, g_msg_queue_para
 	zlog_info(handler,"init_cst_state open axidma -------------\n");
 	(*g_csi)->p_csi_axidma = axidma_open();
 	if((*g_csi)->p_csi_axidma == NULL){
-		zlog_error(handler," axidma_open failed\n");
+		zlog_error(handler," In init_cst_state -------- axidma_open failed !! \n");
 		return -1;
 	}
 	
-	int rc;
-	rc = axidma_register_callback((*g_csi)->p_csi_axidma, csi_callback, (void*)g_server);
-	if(rc != 0){
-		zlog_error(handler," axidma_register_callback failed\n");
-		return -1;
-	}
-
-
-	zlog_info(handler,"End init_cst_state open axidma()\n");
+	zlog_info(handler,"End init_cst_state open axidma() p_csi = %x, \n", (*g_csi)->p_csi_axidma);
 	return 0;
 
+}
+
+int cst_register_callback(g_csi_para* g_csi){
+	int rc;
+	rc = axidma_register_callback(g_csi->p_csi_axidma, csi_callback, (void*)(g_csi->g_server));
+	if(rc != 0){
+		zlog_error(g_csi->log_handler," axidma_register_callback failed\n");
+		return -1;
+	}
+	return 0;
 }
 
 
