@@ -120,7 +120,7 @@ int connect_check(char* eth)
 	char statue[20];
 	
 	if(strcmp(eth,"eth0") == 0)
-		net_fd=open("/sys/class/net/eth0/operstate",O_RDONLY);
+		net_fd=open("/sys/class/net/eth0/operstate",O_RDONLY); // O_RDWR 
 	else if(strcmp(eth,"eth1") == 0)
 		net_fd=open("/sys/class/net/eth1/operstate",O_RDONLY);
 	if(net_fd<0)

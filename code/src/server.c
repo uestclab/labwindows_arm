@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/syscall.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -14,13 +15,12 @@
 #include "msg_queue.h"
 #include "countDownLatch.h"
 
-
 #include "cJSON.h"
-
-
-
-
 #define BUFFER_SIZE 2560*4
+
+void print_gettid(zlog_category_t* handler){ 
+	zlog_info(handler,"thread id: %ld\n", syscall(SYS_gettid));	
+}
 
 
 // --------------
@@ -58,15 +58,24 @@ void gw_set_socket_buffer(int sock, zlog_category_t* handler){
 }
 
 
-void gw_set_non_blocking_mode(int sock)
+void gw_set_non_blocking_mode(int sockfd)
 {
-    int flags = fcntl(sock, F_GETFL, 0);
-    fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+    int flags = fcntl(sockfd, F_GETFL, 0);
+    fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
 }
 
-void gw_set_recv_timeout_mode(int sock){
+void gw_set_recv_timeout_mode(int sockfd){
 	struct timeval timeout = {0,5}; 
-	setsockopt(sock,SOL_SOCKET,SO_RCVTIMEO,(char *)&timeout,sizeof(struct timeval));
+	setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(char *)&timeout,sizeof(struct timeval));
+}
+
+void gw_set_send_timeout_mode(int sockfd){
+	struct timeval timeout;
+	timeout.tv_sec = 2;
+	timeout.tv_usec = 0;
+	
+	socklen_t len = sizeof(timeout);
+	int ret = setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &timeout, len);
 }
 
 void postMsg(long int msg_type, char *buf, int buf_len, g_receive_para* g_receive){
@@ -182,6 +191,19 @@ int getRunningState(g_receive_para* g_receive, int value){
 	return ret;
 }
 
+int getServerwaiting(g_server_para* g_server, int value){
+	pthread_mutex_lock(g_server->para_waiting_t->mutex_);
+	if(value == 1){
+		zlog_info(g_server->log_handler,"set g_server->waiting = 0");
+		g_server->waiting = STATE_DISCONNECTED;
+		pthread_mutex_unlock(g_server->para_waiting_t->mutex_); // note that: pthread_mutex_unlock before return !!!!! 
+		return 0;
+	}
+	int ret = g_server->waiting;
+	pthread_mutex_unlock(g_server->para_waiting_t->mutex_);
+	return ret;
+}
+
 
 void* receive_thread(void* args){
 	g_receive_para* g_receive = (g_receive_para*)args;
@@ -197,20 +219,35 @@ void* receive_thread(void* args){
 // send thread safe
 int sendToPc(g_server_para* g_server, char* send_buf, int send_buf_len, int device){
 	g_receive_para* g_receive = g_server->g_receive;
-	if(g_server->waiting == STATE_DISCONNECTED){
-		zlog_error(g_server->log_handler,"sendToPc , STATE_DISCONNECTED !!!!!!!!!!!! ------ device = %d ", device);
+
+	if(getServerwaiting(g_server,0) == STATE_DISCONNECTED){ // getServerwaiting(g_server,0)
+		zlog_error(g_server->log_handler,"sendToPc , STATE_DISCONNECTED !!--- device = %d \n", device);
+		print_gettid(g_server->log_handler);
 		return 0 ;
 	}else if(g_receive == NULL){
-		zlog_error(g_server->log_handler,"sendToPc , g_receive == NULL !!!!!!!!!!!! ------ device = %d ", device);
+		zlog_error(g_server->log_handler,"sendToPc , g_receive == NULL !!!------ device = %d \n", device);
+		print_gettid(g_server->log_handler);
 		return 0 ;
 	}
-	pthread_mutex_lock(g_receive->para_t->mutex_);
+
+	//pthread_mutex_lock(g_receive->para_t->mutex_);
+	pthread_mutex_lock(g_server->para_t->mutex_);
 	int ret = send(g_receive->connfd,send_buf,send_buf_len,0);
 	if(ret != send_buf_len){
-		zlog_error(g_receive->log_handler,"Error in client send socket: send length = %d , expected length = %d", ret , send_buf_len);
+		if (errno == EWOULDBLOCK || errno == EAGAIN){
+			if(errno == EWOULDBLOCK)
+				zlog_error(g_receive->log_handler,"Error in client send socket:  timeout -- EWOULDBLOCK device = %d, \n", device);
+			if(errno == EAGAIN)
+				zlog_error(g_receive->log_handler,"Error in client send socket:  timeout -- EAGAIN device = %d, \n", device);
+			print_gettid(g_server->log_handler);
+			errno = 0;
+		}
+		zlog_error(g_receive->log_handler,"Error in client send socket: send length = %d , expected length = %d,", ret , send_buf_len);
+		print_gettid(g_server->log_handler);
 	}
 	g_receive->send_cnt = g_receive->send_cnt + 1;
-	pthread_mutex_unlock(g_receive->para_t->mutex_);
+	//pthread_mutex_unlock(g_receive->para_t->mutex_);
+	pthread_mutex_unlock(g_server->para_t->mutex_);
 	return ret;
 }
 
@@ -276,6 +313,7 @@ int InitServerThread(g_server_para** g_server, g_msg_queue_para* g_msg_queue, g_
 	(*g_server)->enableCallback    = 0;
 	(*g_server)->csi_cnt      = 0;
 	(*g_server)->para_t       = newThreadPara();
+	(*g_server)->para_waiting_t = newThreadPara();
 	(*g_server)->g_msg_queue  = g_msg_queue;
 	(*g_server)->g_receive    = NULL;
 	(*g_server)->log_handler  = handler;
@@ -306,6 +344,7 @@ int InitReceThread(g_receive_para** g_receive, g_msg_queue_para* g_msg_queue, in
 	(*g_receive)->send_cnt        = 0;
 
 	gw_set_recv_timeout_mode(connfd);
+	//gw_set_send_timeout_mode(connfd);
 
 	//gw_set_socket_buffer(connfd,handler);
 
@@ -319,6 +358,8 @@ int InitReceThread(g_receive_para** g_receive, g_msg_queue_para* g_msg_queue, in
 
 void freeReceThread(g_server_para* g_server){
 	g_server->waiting = STATE_DISCONNECTED;
+	getServerwaiting(g_server,1);
+	//g_server->waiting = STATE_DISCONNECTED;
 	g_receive_para* g_receive = g_server->g_receive;
 	
 	//pthread_cancel(*(g_receive->para_t->thread_pid));

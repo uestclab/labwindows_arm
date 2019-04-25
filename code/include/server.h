@@ -12,6 +12,11 @@
 #include "utility.h"
 #include "countDownLatch.h"
 
+// system state 
+//#define STATE_DISCONNECTED      0
+//#define STATE_STARTUP           1
+//#define STATE_CONNECTED         2
+
 typedef struct g_receive_para{
 	g_msg_queue_para*  g_msg_queue;     
 	int                receive_running;
@@ -38,6 +43,7 @@ typedef struct g_server_para{
 	int                enableCallback;
 	uint32_t           csi_cnt;
 	para_thread*       para_t;
+	para_thread*       para_waiting_t;
 	zlog_category_t*   log_handler;
 }g_server_para;
 

@@ -71,7 +71,7 @@ void eventLoop(g_server_para* g_server, g_msg_queue_para* g_msg_queue, g_timer_p
 					g_server->g_receive->connected = 0;
 					display(g_server);
 				}else{
-					zlog_info(zlog_handler," ------ close_rssi() and gw_stopcsi() ---- \n");
+					zlog_info(zlog_handler," ------ MSG_TIMEOUT : close_rssi() and gw_stopcsi() ---- \n");
 
 					close_rssi(g_broker);
 					gw_stopcsi(g_csi);
@@ -89,12 +89,13 @@ void eventLoop(g_server_para* g_server, g_msg_queue_para* g_msg_queue, g_timer_p
 			}
 			case MSG_RECEIVED_HEART_BEAT:
 			{
-				//zlog_info(zlog_handler," ---------------- EVENT : MSG_RECEIVED_HEART_BEAT: msg_number = %d",getData->msg_number);
+				zlog_info(zlog_handler," ---------------- EVENT : MSG_RECEIVED_HEART_BEAT: msg_number = %d",getData->msg_number);
 
 				g_server->g_receive->connected = 1;
 
 				break;
 			}
+/*
 			case MSG_CLOSE_LINK_REQUEST:
 			{				
 				zlog_info(zlog_handler," ---------------- EVENT : MSG_CLOSE_LINK_REQUEST: msg_number = %d",getData->msg_number);
@@ -106,6 +107,7 @@ void eventLoop(g_server_para* g_server, g_msg_queue_para* g_msg_queue, g_timer_p
 
 				break;				
 			}
+*/
 			case MSG_STOP_CSI:
 			{
 				zlog_info(zlog_handler," ---------------- EVENT : MSG_STOP_CSI: msg_number = %d",getData->msg_number);

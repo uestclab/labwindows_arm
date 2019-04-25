@@ -2,20 +2,17 @@
 #include "utility.h"
 #include "cst_net.h"
 #include "zlog.h"
-
+static int call_cnt = 0;
 /* ========================================================================================== */
 int csi_callback(char* buf, int buf_len, void* arg)
 {
 	g_server_para* g_server = (g_server_para*)arg;
-
-	if(g_server->csi_cnt != 0){
+	if(g_server->csi_cnt < 100){
 		g_server->csi_cnt = g_server->csi_cnt + 1;
-		g_server->csi_cnt = g_server->csi_cnt % 100;
-		return 0 ;
+		return 0;
 	}
-
-	g_server->csi_cnt = g_server->csi_cnt + 1;
-	g_server->csi_cnt = g_server->csi_cnt % 100;
+	//zlog_info(g_server->log_handler,"csi_callback() call_cnt = %d ", call_cnt);
+	g_server->csi_cnt = 0;
 
 	int messageLen = buf_len + 4 + 4;
 	// htonl ?

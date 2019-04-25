@@ -45,8 +45,8 @@ void closeServerLog(){
 
 int main(int argc,char** argv)
 {
-	//zlog_category_t *zlog_handler = serverLog("/run/media/mmcblk1p1/etc/zlog_default.conf");
-	zlog_category_t *zlog_handler = serverLog("./zlog_default.conf");
+	zlog_category_t *zlog_handler = serverLog("/run/media/mmcblk1p1/etc/zlog_default.conf");
+	//zlog_category_t *zlog_handler = serverLog("./zlog_default.conf");
 
 	zlog_info(zlog_handler,"start devAdapter process\n");
 

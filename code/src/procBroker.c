@@ -12,6 +12,9 @@
 #define MAXSHAREBUF_SIZE 1024*60
 #define HEADROOM 8
 
+//void dev_set_log(log_print log_func)
+//typedef int (*log_print)(const char *format,...);
+
 g_broker_para* g_broker_temp = NULL;
 
 void sendStateInquiry(g_server_para* g_server, char* stat_buf, int stat_buf_len, int type){
@@ -50,7 +53,7 @@ void print_rssi_struct(g_broker_para* g_broker, char* buf, int buf_len){
 int process_exception(char* buf, int buf_len, char *from, void* arg)
 { 
 	int ret = 0;
-	if(g_broker_temp->g_server->g_receive->connfd == -1)
+	if(g_broker_temp->g_server->waiting == STATE_DISCONNECTED)
 		return -1;
 	if(strcmp(from,"mon/all/pub/system_stat") == 0){
 		zlog_info(g_broker_temp->log_handler,"process_exception: mon/all/pub/system_stat");
@@ -78,6 +81,8 @@ int initProcBroker(char *argv, g_broker_para** g_broker, g_server_para* g_server
 	zlog_info(handler,"get_prog_name(argv) = %s , ret = %d \n",get_prog_name(argv),ret);
 	if( ret != 0)
 		return -2;
+	
+	//dev_set_log(printf);
 
 	g_broker_temp = *g_broker;
 	zlog_info(handler,"end initProcBroker()\n");
