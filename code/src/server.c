@@ -98,7 +98,6 @@ int processMessage(const char* buf, int32_t length,g_receive_para* g_receive){
 	}else if(type == 99){ // heart beat
 		postMsg(MSG_RECEIVED_HEART_BEAT,NULL,0,g_receive);
 	}else if(type == 5){ // close link button : stop
-		postMsg(MSG_CLOSE_LINK_REQUEST,NULL,0,g_receive);
 		zlog_info(g_receive->log_handler,"receive : %s\n",jsonfile);
 	}else if(type == 7){ //gw_startcsi();
 		postMsg(MSG_START_CSI,NULL,0,g_receive);
@@ -220,6 +219,12 @@ void* receive_thread(void* args){
 int sendToPc(g_server_para* g_server, char* send_buf, int send_buf_len, int device){
 	g_receive_para* g_receive = g_server->g_receive;
 
+	pthread_mutex_lock(g_server->para_t->mutex_);
+	if(g_server->send_enable == 0){
+		pthread_mutex_unlock(g_server->para_t->mutex_);		
+		return 0;
+	}
+
 	if(getServerwaiting(g_server,0) == STATE_DISCONNECTED){ // getServerwaiting(g_server,0)
 		zlog_error(g_server->log_handler,"sendToPc , STATE_DISCONNECTED !!--- device = %d \n", device);
 		print_gettid(g_server->log_handler);
@@ -231,9 +236,10 @@ int sendToPc(g_server_para* g_server, char* send_buf, int send_buf_len, int devi
 	}
 
 	//pthread_mutex_lock(g_receive->para_t->mutex_);
-	pthread_mutex_lock(g_server->para_t->mutex_);
+	//pthread_mutex_lock(g_server->para_t->mutex_);
 	int ret = send(g_receive->connfd,send_buf,send_buf_len,0);
 	if(ret != send_buf_len){
+		g_server->send_enable = 0;
 		if (errno == EWOULDBLOCK || errno == EAGAIN){
 			if(errno == EWOULDBLOCK)
 				zlog_error(g_receive->log_handler,"Error in client send socket:  timeout -- EWOULDBLOCK device = %d, \n", device);
@@ -312,6 +318,7 @@ int InitServerThread(g_server_para** g_server, g_msg_queue_para* g_msg_queue, g_
 	(*g_server)->g_cntDown    = g_cntDown;
 	(*g_server)->enableCallback    = 0;
 	(*g_server)->csi_cnt      = 0;
+	(*g_server)->send_enable  = 0;    
 	(*g_server)->para_t       = newThreadPara();
 	(*g_server)->para_waiting_t = newThreadPara();
 	(*g_server)->g_msg_queue  = g_msg_queue;
@@ -344,9 +351,6 @@ int InitReceThread(g_receive_para** g_receive, g_msg_queue_para* g_msg_queue, in
 	(*g_receive)->send_cnt        = 0;
 
 	gw_set_recv_timeout_mode(connfd);
-	//gw_set_send_timeout_mode(connfd);
-
-	//gw_set_socket_buffer(connfd,handler);
 
 	int ret = pthread_create((*g_receive)->para_t->thread_pid, NULL, receive_thread, (void*)(*g_receive));
     if(ret != 0){
@@ -357,9 +361,9 @@ int InitReceThread(g_receive_para** g_receive, g_msg_queue_para* g_msg_queue, in
 }
 
 void freeReceThread(g_server_para* g_server){
-	g_server->waiting = STATE_DISCONNECTED;
-	getServerwaiting(g_server,1);
 	//g_server->waiting = STATE_DISCONNECTED;
+	getServerwaiting(g_server,1);
+
 	g_receive_para* g_receive = g_server->g_receive;
 	
 	//pthread_cancel(*(g_receive->para_t->thread_pid));

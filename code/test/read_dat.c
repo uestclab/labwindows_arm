@@ -72,7 +72,7 @@ void main()
 {
 	FILE* fp;
 
-	if((fp=fopen("test_parse.dat","rb"))==NULL)
+	if((fp=fopen("csi2.dat","rb"))==NULL)
 	{
 		printf("无法打开文件");
 		exit(0);
@@ -80,7 +80,9 @@ void main()
 	printf("unsigned short = %d \n", sizeof(unsigned short));
 	char get[1024];
 	size_t num = fread(get,sizeof(char),1024,fp);
-	parse_IQ_from_net(get,1024);
+	for(int i =0;i<1024;i++)
+		printf("%c,",get[i]);
+	//parse_IQ_from_net(get,1024);
 }
 
 

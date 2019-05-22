@@ -20,10 +20,11 @@ g_msg_queue_para* createMsgQueue(zlog_category_t* handler){
 
 void postMsgQueue(struct msg_st* data, g_msg_queue_para* g_msg_queue){
 
+	pthread_mutex_lock(g_msg_queue->para_t->mutex_);
 	data->msg_number = g_msg_queue->seq_id;
 	g_msg_queue->seq_id = g_msg_queue->seq_id + 1;
 
-	pthread_mutex_lock(g_msg_queue->para_t->mutex_);
+	//pthread_mutex_lock(g_msg_queue->para_t->mutex_);
 	if(msgsnd(g_msg_queue->msgid, (void*)data, MAX_TEXT, 0) == -1){  
 		zlog_info(g_msg_queue->log_handler,"postMsgQueue : msgsnd failed\n"); 
 	}

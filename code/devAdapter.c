@@ -42,6 +42,13 @@ void closeServerLog(){
 	zlog_fini();
 }
 
+void c_compiler_builtin_macro(zlog_category_t* zlog_handler)
+{
+	zlog_info(zlog_handler,"gcc compiler ver:%s\n",__VERSION__);
+	zlog_info(zlog_handler,"this version built time is:[%s  %s]\n",__DATE__,__TIME__);
+	//printf("gcc compiler ver:%s\n",__VERSION__);
+	//printf("this version built time is:[%s  %s]\n",__DATE__,__TIME__);
+}
 
 int main(int argc,char** argv)
 {
@@ -49,6 +56,8 @@ int main(int argc,char** argv)
 	//zlog_category_t *zlog_handler = serverLog("./zlog_default.conf");
 
 	zlog_info(zlog_handler,"start devAdapter process\n");
+
+	c_compiler_builtin_macro(zlog_handler);
 
 	/* countDownLatch */
 	g_cntDown_para* g_cntDown = NULL;
@@ -78,12 +87,7 @@ int main(int argc,char** argv)
 		zlog_info(zlog_handler,"No server thread created \n");
 		return 0;
 	}
-	//zlog_info(zlog_handler,"begin counterWait ...\n");
-	//counterWait(g_cntDown);//wait for the three sub-threads end;
-	//g_server->enableCallback = 1;
-	//zlog_info(zlog_handler,"End counterWait ...\n");
 	
-
 	/* broker handler */
 	g_broker_para* g_broker = NULL;
 	state = initProcBroker(argv[0], &g_broker, g_server, zlog_handler);

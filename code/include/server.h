@@ -37,11 +37,12 @@ typedef struct g_server_para{
 	g_msg_queue_para*  g_msg_queue;
 	g_receive_para*    g_receive;
 	int                listenfd;            
-	int                waiting;   // for state indicator
-	int                hasTimer;
+	int                waiting;            // for state indicator
+	int                hasTimer;           // whether start timer
 	g_cntDown_para*    g_cntDown;
-	int                enableCallback;
-	uint32_t           csi_cnt;
+	int                enableCallback;     // whether register cb to csi and procBroker
+	uint32_t           csi_cnt;            // for csi send cnt to slow csi data
+	int                send_enable;        // if network send error in sendToPc , set disable 
 	para_thread*       para_t;
 	para_thread*       para_waiting_t;
 	zlog_category_t*   log_handler;

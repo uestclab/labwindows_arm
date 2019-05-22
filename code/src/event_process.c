@@ -44,6 +44,8 @@ void eventLoop(g_server_para* g_server, g_msg_queue_para* g_msg_queue, g_timer_p
 					zlog_info(zlog_handler," ---------- start timer ------------");
 				}
 
+				g_server->send_enable = 1;
+
 				break;
 			}
 			case MSG_RSSI_STATE_CHANGE:
@@ -95,19 +97,6 @@ void eventLoop(g_server_para* g_server, g_msg_queue_para* g_msg_queue, g_timer_p
 
 				break;
 			}
-/*
-			case MSG_CLOSE_LINK_REQUEST:
-			{				
-				zlog_info(zlog_handler," ---------------- EVENT : MSG_CLOSE_LINK_REQUEST: msg_number = %d",getData->msg_number);
-
-				close_rssi(g_broker);
-				gw_stopcsi(g_csi);				
-
-				stopReceThread(g_server);
-
-				break;				
-			}
-*/
 			case MSG_STOP_CSI:
 			{
 				zlog_info(zlog_handler," ---------------- EVENT : MSG_STOP_CSI: msg_number = %d",getData->msg_number);
