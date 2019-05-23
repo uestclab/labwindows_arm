@@ -25,16 +25,15 @@
 #define MSG_RSSI_STATE_CHANGE          13
 #define MSG_START_CSI                  14
 #define MSG_STOP_CSI                   15
-#define MSG_CLOSE_LINK_REQUEST         16
+#define MSG_START_CONSTELLATION        16
+#define MSG_STOP_CONSTELLATION         17
 
 // post from receiver thread : exit thread
-#define MSG_RECEIVE_THREAD_CLOSED      17
-
-// post from csi_handler : csi_callback
-#define MSG_CSI_SEND_ERROR             18
+#define MSG_RECEIVE_THREAD_CLOSED      18
 
 // post from timer thread call back
 #define MSG_TIMEOUT                    20
+#define MSG_STOP_TIMER                 21
 
 // system state 
 #define STATE_DISCONNECTED      0

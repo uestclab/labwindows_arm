@@ -19,7 +19,7 @@ void display(g_server_para* g_server){
 }
 
 void eventLoop(g_server_para* g_server, g_msg_queue_para* g_msg_queue, g_timer_para* g_timer, 
-		g_broker_para* g_broker, g_csi_para* g_csi, zlog_category_t* zlog_handler)
+		g_broker_para* g_broker, g_dma_para* g_dma, zlog_category_t* zlog_handler)
 {
 	while(1){
 		struct msg_st* getData = getMsgQueue(g_msg_queue);
@@ -34,7 +34,7 @@ void eventLoop(g_server_para* g_server, g_msg_queue_para* g_msg_queue, g_timer_p
 				if(g_server->enableCallback == 0){
 					zlog_info(zlog_handler," ---------------- EVENT : MSG_ACCEPT_NEW_CLIENT: register callback \n");
 					broker_register_callback(g_broker);
-					cst_register_callback(g_csi);
+					dma_register_callback(g_dma);
 					g_server->enableCallback = 1;
 				}
 
@@ -76,16 +76,28 @@ void eventLoop(g_server_para* g_server, g_msg_queue_para* g_msg_queue, g_timer_p
 					zlog_info(zlog_handler," ------ MSG_TIMEOUT : close_rssi() and gw_stopcsi() ---- \n");
 
 					close_rssi(g_broker);
-					gw_stopcsi(g_csi);
+					gw_stopcsi(g_dma);
+					gw_stop_constellation(g_dma);
 					
 					stopReceThread(g_server);
 
 				}
 				break;
 			}
+			case MSG_STOP_TIMER:
+			{
+				zlog_info(zlog_handler," --------------------------- EVENT : MSG_STOP_TIMER: msg_number = %d",getData->msg_number);
+				break;
+			}
 			case MSG_RECEIVE_THREAD_CLOSED:
 			{
 				zlog_info(zlog_handler," --------------------------- EVENT : MSG_RECEIVE_THREAD_CLOSED: msg_number = %d",getData->msg_number);
+
+				if(g_server->hasTimer == 1){
+					stop_Timer(g_timer);
+					g_server->hasTimer = 0;
+					zlog_info(zlog_handler," ---------- close timer ------------");
+				}
 				
 				break;
 			}
@@ -101,7 +113,7 @@ void eventLoop(g_server_para* g_server, g_msg_queue_para* g_msg_queue, g_timer_p
 			{
 				zlog_info(zlog_handler," ---------------- EVENT : MSG_STOP_CSI: msg_number = %d",getData->msg_number);
 				
-				gw_stopcsi(g_csi);
+				gw_stopcsi(g_dma);
 
 				break;
 			}
@@ -109,15 +121,25 @@ void eventLoop(g_server_para* g_server, g_msg_queue_para* g_msg_queue, g_timer_p
 			{
 				zlog_info(zlog_handler," ---------------- EVENT : MSG_START_CSI: msg_number = %d",getData->msg_number);
 				
-				gw_startcsi(g_csi);
+				gw_startcsi(g_dma);
 
 				break;			
 			}
-			case MSG_CSI_SEND_ERROR:
+			case MSG_START_CONSTELLATION:
 			{
-				zlog_info(zlog_handler," ---------------- EVENT : MSG_CSI_SEND_ERROR: msg_number = %d",getData->msg_number);
+				zlog_info(zlog_handler," ---------------- EVENT : MSG_START_CONSTELLATION: msg_number = %d",getData->msg_number);
+				
+				gw_start_constellation(g_dma);
 
-				break;	
+				break;
+			}
+			case MSG_STOP_CONSTELLATION:
+			{
+				zlog_info(zlog_handler," ---------------- EVENT : MSG_STOP_CONSTELLATION: msg_number = %d",getData->msg_number);
+				
+				gw_stop_constellation(g_dma);
+
+				break;			
 			}
 			default:
 				break;

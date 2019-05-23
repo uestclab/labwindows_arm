@@ -17,13 +17,15 @@ typedef struct g_timer_para{
 	int                seconds;
 	int                mseconds;       
 	int                running;
+	int                closeState;
+	para_thread*       para_state_t;
 	para_thread*       para_t;
 	zlog_category_t*   log_handler;
 }g_timer_para;
 
 
 int InitTimerThread(g_timer_para** g_timer, g_msg_queue_para* g_msg_queue, g_cntDown_para* g_cntDown, zlog_category_t* handler);
-void close_Timer(g_timer_para* g_timer);
+void stop_Timer(g_timer_para* g_timer);
 void Start_Timer(timercb_func timer_cb, int sec, int msec, g_timer_para* g_timer);
 
 

@@ -11,7 +11,7 @@
 #include "event_process.h"
 #include "gw_timer.h"
 #include "procBroker.h"
-#include "csi_handler.h"
+#include "dma_handler.h"
 #include "countDownLatch.h"
 
 
@@ -96,15 +96,15 @@ int main(int argc,char** argv)
 		return 0;
 	}
 
-	/* csi_handler */
-	g_csi_para* g_csi = NULL;
-	state = init_cst_state(&g_csi, g_server, g_msg_queue, zlog_handler);
-	if(state != 0 || g_csi == NULL){
-		zlog_info(zlog_handler,"No init_cst_state created \n");
+	/* dma_handler */
+	g_dma_para* g_dma = NULL;
+	state = init_dma_state(&g_dma, g_server, g_msg_queue, zlog_handler);
+	if(state != 0 || g_dma == NULL){
+		zlog_info(zlog_handler,"No init_dma_state created \n");
 		return 0;
 	}
 
-	eventLoop(g_server, g_msg_queue, g_timer, g_broker, g_csi, zlog_handler);
+	eventLoop(g_server, g_msg_queue, g_timer, g_broker, g_dma, zlog_handler);
 
 	closeServerLog();
     return 0;

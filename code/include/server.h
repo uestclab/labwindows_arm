@@ -41,7 +41,6 @@ typedef struct g_server_para{
 	int                hasTimer;           // whether start timer
 	g_cntDown_para*    g_cntDown;
 	int                enableCallback;     // whether register cb to csi and procBroker
-	uint32_t           csi_cnt;            // for csi send cnt to slow csi data
 	int                send_enable;        // if network send error in sendToPc , set disable 
 	para_thread*       para_t;
 	para_thread*       para_waiting_t;

@@ -93,22 +93,20 @@ void postMsg(long int msg_type, char *buf, int buf_len, g_receive_para* g_receiv
 int processMessage(const char* buf, int32_t length,g_receive_para* g_receive){
 	int type = myNtohl(buf + 4);
 	char* jsonfile = buf + sizeof(int32_t) + sizeof(int32_t);
-	if(type == 4){ // open csi
-		zlog_info(g_receive->log_handler,"receive : open csi request");
-	}else if(type == 99){ // heart beat
+	if(type == 99){ // heart beat
 		postMsg(MSG_RECEIVED_HEART_BEAT,NULL,0,g_receive);
-	}else if(type == 5){ // close link button : stop
-		zlog_info(g_receive->log_handler,"receive : %s\n",jsonfile);
+	}else if(type == 4){ // start constellation
+		postMsg(MSG_START_CONSTELLATION,NULL,0,g_receive);
+	}else if(type == 5){ // stop constellation
+		postMsg(MSG_STOP_CONSTELLATION,NULL,0,g_receive);
 	}else if(type == 7){ //gw_startcsi();
 		postMsg(MSG_START_CSI,NULL,0,g_receive);
 	}else if(type == 8){ //gw_stopcsi();
 		postMsg(MSG_STOP_CSI,NULL,0,g_receive);
 	}else if(type == 1){ // json
 		postMsg(MSG_INQUIRY_STATE,jsonfile,length-4,g_receive);
-		//inquiry_state_from(jsonfile,length-4);	
 	}else if(type == 2){ // rssi json
 		postMsg(MSG_RSSI_STATE_CHANGE,jsonfile,length-4,g_receive);
-		//rssi_state_change(jsonfile,length-4);
 	}
 	return 0;
 }
@@ -317,7 +315,6 @@ int InitServerThread(g_server_para** g_server, g_msg_queue_para* g_msg_queue, g_
 	(*g_server)->hasTimer     = 0;
 	(*g_server)->g_cntDown    = g_cntDown;
 	(*g_server)->enableCallback    = 0;
-	(*g_server)->csi_cnt      = 0;
 	(*g_server)->send_enable  = 0;    
 	(*g_server)->para_t       = newThreadPara();
 	(*g_server)->para_waiting_t = newThreadPara();
