@@ -216,12 +216,7 @@ void* receive_thread(void* args){
 // send thread safe
 int sendToPc(g_server_para* g_server, char* send_buf, int send_buf_len, int device){
 	g_receive_para* g_receive = g_server->g_receive;
-
-	pthread_mutex_lock(g_server->para_t->mutex_);
-	if(g_server->send_enable == 0){
-		pthread_mutex_unlock(g_server->para_t->mutex_);		
-		return 0;
-	}
+	g_receive->send_cnt = g_receive->send_cnt + 1;
 
 	if(getServerwaiting(g_server,0) == STATE_DISCONNECTED){ // getServerwaiting(g_server,0)
 		zlog_error(g_server->log_handler,"sendToPc , STATE_DISCONNECTED !!--- device = %d \n", device);
@@ -233,8 +228,13 @@ int sendToPc(g_server_para* g_server, char* send_buf, int send_buf_len, int devi
 		return 0 ;
 	}
 
-	//pthread_mutex_lock(g_receive->para_t->mutex_);
-	//pthread_mutex_lock(g_server->para_t->mutex_);
+	pthread_mutex_lock(g_server->para_t->mutex_);
+	if(g_server->send_enable == 0){
+		zlog_error(g_server->log_handler,"sendToPc , g_server->send_enable == 0 return ....\n");
+		pthread_mutex_unlock(g_server->para_t->mutex_);		
+		return 0;
+	}
+
 	int ret = send(g_receive->connfd,send_buf,send_buf_len,0);
 	if(ret != send_buf_len){
 		g_server->send_enable = 0;
@@ -249,8 +249,7 @@ int sendToPc(g_server_para* g_server, char* send_buf, int send_buf_len, int devi
 		zlog_error(g_receive->log_handler,"Error in client send socket: send length = %d , expected length = %d,", ret , send_buf_len);
 		print_gettid(g_server->log_handler);
 	}
-	g_receive->send_cnt = g_receive->send_cnt + 1;
-	//pthread_mutex_unlock(g_receive->para_t->mutex_);
+	g_receive->comp_send_cnt = g_receive->comp_send_cnt + 1;
 	pthread_mutex_unlock(g_server->para_t->mutex_);
 	return ret;
 }
@@ -346,6 +345,7 @@ int InitReceThread(g_receive_para** g_receive, g_msg_queue_para* g_msg_queue, in
 	(*g_receive)->log_handler 	  = handler;
 	(*g_receive)->rcv_cnt         = 0;
 	(*g_receive)->send_cnt        = 0;
+	(*g_receive)->comp_send_cnt   = 0;
 
 	gw_set_recv_timeout_mode(connfd);
 

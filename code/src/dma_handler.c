@@ -7,8 +7,8 @@
 int IQ_register_callback(char* buf, int buf_len, void* arg)
 {
 	g_dma_para* g_dma = (g_dma_para*)arg;
-	//zlog_info(g_dma->log_handler,"IQ_register_callback !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-	if(g_dma->slow_cnt < 100){
+	if(g_dma->slow_cnt < 50){
+		//zlog_info(g_dma->log_handler,"IQ_register_callback !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 		g_dma->slow_cnt = g_dma->slow_cnt + 1;
 		return 0;
 	}
@@ -25,7 +25,6 @@ int IQ_register_callback(char* buf, int buf_len, void* arg)
 	*((int32_t*)buf) = (buf_len + 4);
 	*((int32_t*)(buf+ sizeof(int32_t))) = (type); // 1--rssi , 2--CSI , 3--json , 4--Constellation
 	int ret = sendToPc(g_dma->g_server, buf, messageLen,type);
-
 	return 0;
 }
 

@@ -13,6 +13,7 @@ void timerout_cb(g_msg_queue_para* g_msg_queue){
 
 void display(g_server_para* g_server){
 	zlog_info(g_server->log_handler,"  ---------------- display () --------------------------\n");
+	zlog_info(g_server->log_handler," g_receive->comp_send_cnt = %u ", g_server->g_receive->comp_send_cnt);
 	zlog_info(g_server->log_handler," g_receive->send_cnt = %u ", g_server->g_receive->send_cnt);
 	zlog_info(g_server->log_handler," g_receive->rcv_cnt = %u ", g_server->g_receive->rcv_cnt);
 	zlog_info(g_server->log_handler,"  ---------------- end display () ----------------------\n");

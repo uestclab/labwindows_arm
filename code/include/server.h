@@ -31,6 +31,7 @@ typedef struct g_receive_para{
 	zlog_category_t*   log_handler;
 	uint32_t           rcv_cnt;  // debug counter
 	uint32_t           send_cnt; // debug counter
+	uint32_t           comp_send_cnt;
 }g_receive_para;
 
 typedef struct g_server_para{
