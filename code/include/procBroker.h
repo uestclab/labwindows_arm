@@ -25,6 +25,11 @@ struct rssi_priv{
 	char rssi_buf[MAX_RSSI_NO]; 
 }__attribute__((packed));
 
+typedef struct ret_byte{
+	char* low;
+	char* high;
+}ret_byte;
+
 
 int initProcBroker(char *argv, g_broker_para** g_broker, g_server_para* g_server, zlog_category_t* handler);
 int broker_register_callback(g_broker_para* g_broker);
@@ -32,5 +37,7 @@ int inquiry_state_from(char *buf, int buf_len, g_broker_para* g_broker);
 int rssi_state_change(char *buf, int buf_len, g_broker_para* g_broker);
 void close_rssi(g_broker_para* g_broker);
 void freeProcBroker(g_broker_para* g_broker);
+
+int inquiry_rf_and_mf(g_broker_para* g_broker);
 
 #endif//PROCBROKER_H

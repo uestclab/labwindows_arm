@@ -63,6 +63,12 @@ void eventLoop(g_server_para* g_server, g_msg_queue_para* g_msg_queue, g_timer_p
 				
 				break;
 			}
+			case MSG_RF_MF_STATE:
+			{
+				zlog_info(zlog_handler," ---------------- EVENT : MSG_RF_MF_STATE: msg_number = %d",getData->msg_number);
+				inquiry_rf_and_mf(g_broker);
+				break;
+			}
 			case MSG_TIMEOUT:
 			{
 				zlog_info(zlog_handler," ---------------- EVENT : MSG_TIMEOUT: msg_number = %d",getData->msg_number);

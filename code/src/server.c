@@ -107,7 +107,9 @@ int processMessage(const char* buf, int32_t length,g_receive_para* g_receive){
 		postMsg(MSG_INQUIRY_STATE,jsonfile,length-4,g_receive);
 	}else if(type == 2){ // rssi json
 		postMsg(MSG_RSSI_STATE_CHANGE,jsonfile,length-4,g_receive);
-	}
+	}else if(type == 22){ // rf_mf_state
+		postMsg(MSG_RF_MF_STATE,NULL,0,g_receive);
+	} 
 	return 0;
 }
 

@@ -207,6 +207,207 @@ void close_rssi(g_broker_para* g_broker){
 	free(close_rssi_jsonfile);
 }
 
+// ---------- rf and mf ----------------
+
+void send_rf_mf_State(g_server_para* g_server, char* stat_buf, int stat_buf_len){
+	int length = stat_buf_len + 4 + 4;
+	char* temp_buf = malloc(length);
+	// htonl ?
+	*((int32_t*)temp_buf) = (stat_buf_len + sizeof(int32_t));
+	*((int32_t*)(temp_buf+ sizeof(int32_t))) = (5); // 1--rssi , 2--CSI , 3--json , 5--mf and rf state my own json
+	memcpy(temp_buf + HEADROOM,stat_buf,stat_buf_len);
+	int ret = sendToPc(g_server, temp_buf, length, 5);
+	free(temp_buf);
+}
+
+// size : 0--no data,1--, 2--
+int i2cset(g_broker_para* g_broker, const char* dev, const char* addr, const char* reg, int size, const char* data){
+	int     ret = -1;
+	char*   jsonfile = NULL;
+	char*   stat_buf = NULL;
+	int     stat_buf_len = 0;
+	cJSON * root = NULL; 
+	cJSON * item = NULL;
+	cJSON * array = NULL;
+	cJSON * arrayobj = NULL;
+	
+	root = cJSON_CreateObject();
+	cJSON_AddStringToObject(root, "dev", dev); // "/dev/i2c-0" , "/dev/i2c-1"
+
+	cJSON_AddStringToObject(root, "addr", addr);
+	cJSON_AddStringToObject(root, "force", "0x1");
+	cJSON_AddStringToObject(root, "dst", "rf");
+	array=cJSON_CreateArray();
+	cJSON_AddItemToObject(root,"op_cmd",array);
+
+	arrayobj=cJSON_CreateObject();
+	cJSON_AddItemToArray(array,arrayobj);
+	cJSON_AddStringToObject(arrayobj, "_comment","R0");
+	cJSON_AddStringToObject(arrayobj, "cmd","1"); // i2cset
+	cJSON_AddStringToObject(arrayobj, "reg",reg);
+	if(size == 0)
+		cJSON_AddStringToObject(arrayobj, "size","0");
+	else if(size == 1){
+		cJSON_AddStringToObject(arrayobj, "size","1");
+		cJSON_AddStringToObject(arrayobj, "data",data); // "0x00"
+	}
+
+	jsonfile = cJSON_Print(root);
+	item = cJSON_GetObjectItem(root,"dst");
+	ret = dev_transfer(jsonfile,strlen(jsonfile), &stat_buf, &stat_buf_len, item->valuestring, -1);
+
+	cJSON_Delete(root);
+	root = NULL;
+	free(jsonfile);
+
+	if(ret == 0 && stat_buf_len > 0){
+
+		root = cJSON_Parse(stat_buf);
+		item = cJSON_GetObjectItem(root,"stat");
+
+		if(strcmp(item->valuestring,"0") != 0){
+			zlog_info(g_broker->log_handler,"i2cset ----- buf_json = %s\n",stat_buf);
+		}
+
+		cJSON_Delete(root);
+		root = NULL;
+		free(stat_buf);
+	}
+	
+	return 0;
+}
+
+char* i2cget(g_broker_para* g_broker, const char* dev, const char* addr, const char* reg, int size){
+	int     ret = -1;
+	char*   jsonfile = NULL;
+	char*   stat_buf = NULL;
+	int     stat_buf_len = 0;
+	cJSON * root = NULL; 
+	cJSON * item = NULL;
+	cJSON * array = NULL;
+	cJSON * arrayobj = NULL;
+	char *  ret_return = NULL;
+
+	root = cJSON_CreateObject();
+	cJSON_AddStringToObject(root, "dev", dev);
+	cJSON_AddStringToObject(root, "addr", addr);
+	cJSON_AddStringToObject(root, "force", "0x1");
+	cJSON_AddStringToObject(root, "dst", "rf");
+	array=cJSON_CreateArray();
+	cJSON_AddItemToObject(root,"op_cmd",array);
+
+	arrayobj=cJSON_CreateObject();
+	cJSON_AddItemToArray(array,arrayobj);
+	cJSON_AddStringToObject(arrayobj, "_comment","R0");
+	cJSON_AddStringToObject(arrayobj, "cmd","0"); // i2cget
+	cJSON_AddStringToObject(arrayobj, "reg",reg);
+	if(size == 1)
+		cJSON_AddStringToObject(arrayobj, "size","1");
+	else if(size == 2)
+		cJSON_AddStringToObject(arrayobj, "size","2");
+
+	jsonfile = cJSON_Print(root);
+	item = cJSON_GetObjectItem(root,"dst");
+	ret = dev_transfer(jsonfile,strlen(jsonfile), &stat_buf, &stat_buf_len, item->valuestring, -1);
+
+	cJSON_Delete(root);
+	root = NULL;
+	free(jsonfile);
+
+	if(ret == 0 && stat_buf_len > 0){
+
+		cJSON * arry_return = NULL;
+
+		root = cJSON_Parse(stat_buf);
+		item = cJSON_GetObjectItem(root,"stat");
+		if(strcmp(item->valuestring,"0") != 0){
+			zlog_info(g_broker->log_handler,"i2cget ----- buf_json = %s\n",stat_buf);
+			cJSON_Delete(root);
+			root = NULL;
+			free(stat_buf);
+			return NULL;
+		}
+
+		arry_return = cJSON_GetObjectItem(root,"return");
+		if(NULL != arry_return){
+			cJSON* temp_list = arry_return->child;
+			while(temp_list != NULL){
+				char * ret_tmp   = cJSON_GetObjectItem( temp_list , "ret")->valuestring;
+				temp_list = temp_list->next;
+				ret_return = malloc(32);
+				memcpy(ret_return,ret_tmp,strlen(ret_tmp)+1);
+			}
+		}
+		cJSON_Delete(root);
+		root = NULL;
+		free(stat_buf);
+	}
+	
+	return ret_return;
+}
+
+
+char* ad7417_temperature(g_broker_para* g_broker){
+
+	char* p_ret = NULL;
+	
+    //i2cset -y -f 1 0x28 0x00
+	i2cset(g_broker, "/dev/i2c-1", "0x28", "0x00", 0, NULL);
+
+	//i2cset -y -f 1 0x28 0x01 0x00
+	i2cset(g_broker, "/dev/i2c-1", "0x28", "0x01", 1, "0x00");
+
+	//i2cget -y -f 1 0x28 0x00
+	p_ret = i2cget(g_broker, "/dev/i2c-1", "0x28", "0x00", 2);
+
+	return p_ret;
+}
+
+ret_byte* rf_current(g_broker_para* g_broker){
+	ret_byte* p_ret = (ret_byte*)malloc(sizeof(ret_byte));
+	
+    //i2cset -y -f 1 0x48 0x19 0x14
+	i2cset(g_broker, "/dev/i2c-1", "0x48", "0x19", 1, "0x14");
+
+	//i2cget -y -f 1 0x48 0x0a
+	p_ret->high = i2cget(g_broker, "/dev/i2c-1", "0x48", "0x0a", 1);
+
+	//i2cget -y -f 1 0x48 0x04
+	p_ret->low  = i2cget(g_broker, "/dev/i2c-1", "0x48", "0x04", 1);
+
+	return p_ret;
+
+}
+
+
+
+int inquiry_rf_and_mf(g_broker_para* g_broker){
+	//
+	cJSON *root = cJSON_CreateObject();
+
+	char* temperature_ad7417 = ad7417_temperature(g_broker);
+	cJSON_AddStringToObject(root, "ad7417_temper", temperature_ad7417);	
+	free(temperature_ad7417);
+
+	ret_byte* rf_cur = rf_current(g_broker);
+	cJSON_AddStringToObject(root, "rf_cur_low", rf_cur->low);
+	cJSON_AddStringToObject(root, "rf_cur_high", rf_cur->high);
+	free(rf_cur->low);
+	free(rf_cur->high);
+	free(rf_cur);
+
+
+	char* send_jsonfile = cJSON_Print(root);
+
+	send_rf_mf_State(g_broker->g_server, send_jsonfile, strlen(send_jsonfile)+1);
+	zlog_info(g_broker->log_handler,"send_jsonfile = %s \n", send_jsonfile);
+
+	cJSON_Delete(root);
+	free(send_jsonfile);
+	return 0;
+}
+
+
 
 
 

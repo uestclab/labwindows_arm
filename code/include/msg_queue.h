@@ -27,9 +27,10 @@
 #define MSG_STOP_CSI                   15
 #define MSG_START_CONSTELLATION        16
 #define MSG_STOP_CONSTELLATION         17
+#define MSG_RF_MF_STATE                18
 
 // post from receiver thread : exit thread
-#define MSG_RECEIVE_THREAD_CLOSED      18
+#define MSG_RECEIVE_THREAD_CLOSED      19
 
 // post from timer thread call back
 #define MSG_TIMEOUT                    20
