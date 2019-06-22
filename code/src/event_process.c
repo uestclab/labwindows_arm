@@ -16,6 +16,14 @@ void display(g_server_para* g_server){
 	zlog_info(g_server->log_handler," g_receive->comp_send_cnt = %u ", g_server->g_receive->comp_send_cnt);
 	zlog_info(g_server->log_handler," g_receive->send_cnt = %u ", g_server->g_receive->send_cnt);
 	zlog_info(g_server->log_handler," g_receive->rcv_cnt = %u ", g_server->g_receive->rcv_cnt);
+
+	zlog_info(g_server->log_handler," g_receive->point_1_send_cnt = %u ", g_server->g_receive->point_1_send_cnt);
+	zlog_info(g_server->log_handler," g_receive->point_2_send_cnt = %u ", g_server->g_receive->point_2_send_cnt);
+
+	int value = 0;
+	ioctl(g_server->g_receive->connfd, SIOCOUTQ, &value); //TCP socket發送隊列裡頭還沒有發送出去的數據有多少
+	zlog_info(g_server->log_handler," -------------------value = %d \n", value);
+
 	zlog_info(g_server->log_handler,"  ---------------- end display () ----------------------\n");
 }
 

@@ -35,31 +35,6 @@ int initRegdev(g_RegDev_para** g_RegDev, zlog_category_t* handler)
 	return 0;
 }
 
-// 0x43c2010c,bit 7 enable constellation,bit6 enable csi , bit6 and bit7 not both enable
-int switchTocsi(g_RegDev_para* g_RegDev){
-	uint32_t r_value = 0x00000000;
-	int	rc = regdev_read(g_RegDev->mem_dev_phy, 0x10c, &r_value);
-	if(rc < 0){
-		zlog_info(g_RegDev->log_handler,"switchTocsi read failed !!! \n");
-		return rc;
-	}
-
-	// bit6 ~ bit7
-	uint32_t w_value = r_value & (~(0x3<<6));
-	w_value = w_value | (0x1<<6);
-
-	rc = regdev_write(g_RegDev->mem_dev_phy, 0x10c, w_value);
-	if(rc < 0){
-		zlog_info(g_RegDev->log_handler,"switchTocsi write failed !!! \n");
-		return rc;
-	}
-	return 0;
-}
-
-int switchToconstellation(g_RegDev_para* g_RegDev){
-	
-}
-
 
 
 

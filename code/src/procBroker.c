@@ -12,8 +12,13 @@
 #define MAXSHAREBUF_SIZE 1024*60
 #define HEADROOM 8
 
-//void dev_set_log(log_print log_func)
-//typedef int (*log_print)(const char *format,...);
+
+typedef int (*log_print)(const char *format,...);
+void dev_set_log(log_print log_func);
+
+int my_zlog(const char *format,...){
+ 	;
+}
 
 g_broker_para* g_broker_temp = NULL;
 
@@ -56,7 +61,7 @@ int process_exception(char* buf, int buf_len, char *from, void* arg)
 	if(g_broker_temp->g_server->waiting == STATE_DISCONNECTED)
 		return -1;
 	if(strcmp(from,"mon/all/pub/system_stat") == 0){
-		zlog_info(g_broker_temp->log_handler,"process_exception: mon/all/pub/system_stat");
+		zlog_info(g_broker_temp->log_handler,"process_exception: mon/all/pub/system_stat , buf = %s \n", buf);
 		sendStateInquiry(g_broker_temp->g_server,buf,buf_len+1,41);
 	}else if(strcmp(from,"rf/all/pub/rssi") == 0){ 
 		print_rssi_struct(g_broker_temp,buf,buf_len); // send rssi struct stream to pc	
@@ -82,7 +87,7 @@ int initProcBroker(char *argv, g_broker_para** g_broker, g_server_para* g_server
 	if( ret != 0)
 		return -2;
 	
-	//dev_set_log(printf);
+	dev_set_log(printf);
 
 	g_broker_temp = *g_broker;
 	zlog_info(handler,"end initProcBroker()\n");
@@ -123,12 +128,13 @@ int inquiry_state_from(char *buf, int buf_len, g_broker_para* g_broker){
     root = cJSON_Parse(buf);
     item = cJSON_GetObjectItem(root,"dst"); // different device is a dst
 	//zlog_info(g_broker->log_handler,"dst = %s , \n",item->valuestring);
+	zlog_info(g_broker->log_handler,"start dev_transfer......");
 	ret = dev_transfer(buf, buf_len, &stat_buf, &stat_buf_len, item->valuestring, -1);
-
+	zlog_info(g_broker->log_handler,"after dev_transfer...... ret = %d \n", ret);
 	// type is my own string used to distinguish different message request
 	// GW_messageType.h define
 	item_type = cJSON_GetObjectItem(root,"gw_type");
-	//zlog_info(g_broker->log_handler,"item_type = %s , \n",item_type->valuestring);
+
 	int type = 0;
 
 	if(ret == 0 && stat_buf_len > 0 && g_receive != NULL){
@@ -143,10 +149,8 @@ int inquiry_state_from(char *buf, int buf_len, g_broker_para* g_broker){
 				type = 31;
 			sendStateInquiry(g_broker->g_server,stat_buf,stat_buf_len+1,type);
 		}
-		//printbuf_temp(stat_buf,stat_buf_len,g_broker);
 		free(stat_buf);
 	}
-	//zlog_info(g_broker->log_handler,"---------------------end inquiry_state_from---------\n");
 	
 	cJSON_Delete(root);
 	return ret;
@@ -400,7 +404,6 @@ int inquiry_rf_and_mf(g_broker_para* g_broker){
 	char* send_jsonfile = cJSON_Print(root);
 
 	send_rf_mf_State(g_broker->g_server, send_jsonfile, strlen(send_jsonfile)+1);
-	zlog_info(g_broker->log_handler,"send_jsonfile = %s \n", send_jsonfile);
 
 	cJSON_Delete(root);
 	free(send_jsonfile);

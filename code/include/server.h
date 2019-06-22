@@ -11,6 +11,8 @@
 #include "msg_queue.h"
 #include "utility.h"
 #include "countDownLatch.h"
+#include <sys/ioctl.h>
+#include <linux/sockios.h>
 
 // system state 
 //#define STATE_DISCONNECTED      0
@@ -32,6 +34,8 @@ typedef struct g_receive_para{
 	uint32_t           rcv_cnt;  // debug counter
 	uint32_t           send_cnt; // debug counter
 	uint32_t           comp_send_cnt;
+	uint32_t           point_1_send_cnt;
+	uint32_t           point_2_send_cnt;
 }g_receive_para;
 
 typedef struct g_server_para{

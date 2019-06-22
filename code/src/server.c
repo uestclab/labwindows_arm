@@ -10,13 +10,22 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include "zlog.h"
-
 #include "server.h"
 #include "msg_queue.h"
 #include "countDownLatch.h"
 
 #include "cJSON.h"
 #define BUFFER_SIZE 2560*4
+
+void user_wait(g_receive_para* g_receive)
+{
+	int c;
+	while(1){
+		zlog_info(g_receive->log_handler,"user_wait sleep ........ \n");
+		sleep(10);
+	}
+}
+
 
 void print_gettid(zlog_category_t* handler){ 
 	zlog_info(handler,"thread id: %ld\n", syscall(SYS_gettid));	
@@ -38,11 +47,10 @@ void gw_set_socket_buffer(int sock, zlog_category_t* handler){
 	zlog_info(handler," send buf size = : %d ",snd_size);
 	zlog_info(handler," rcv buf size = : %d ",rcv_size);
 
-	snd_size = 10*1024;
+	snd_size = 32*1024*1024;
 	optlen = sizeof(snd_size); 
 	err = setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &snd_size, optlen);
 
-	rcv_size = 10*1024;
 	optlen = sizeof(rcv_size); 
 	err = setsockopt(sock,SOL_SOCKET,SO_RCVBUF, (char *)&rcv_size, optlen);
 
@@ -69,13 +77,14 @@ void gw_set_recv_timeout_mode(int sockfd){
 	setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(char *)&timeout,sizeof(struct timeval));
 }
 
-void gw_set_send_timeout_mode(int sockfd){
+void gw_set_send_timeout_mode(int sockfd,zlog_category_t* handler){
 	struct timeval timeout;
-	timeout.tv_sec = 2;
+	timeout.tv_sec = 5;
 	timeout.tv_usec = 0;
 	
 	socklen_t len = sizeof(timeout);
 	int ret = setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &timeout, len);
+	zlog_info(handler," gw_set_send_timeout_mode : ret = %d ",ret);
 }
 
 void postMsg(long int msg_type, char *buf, int buf_len, g_receive_para* g_receive){
@@ -216,40 +225,49 @@ void* receive_thread(void* args){
 }
 
 // send thread safe
-int sendToPc(g_server_para* g_server, char* send_buf, int send_buf_len, int device){
+int sendToPc(g_server_para* g_server, char* send_buf, int send_buf_len, int type){
 	g_receive_para* g_receive = g_server->g_receive;
 	g_receive->send_cnt = g_receive->send_cnt + 1;
 
 	if(getServerwaiting(g_server,0) == STATE_DISCONNECTED){ // getServerwaiting(g_server,0)
-		zlog_error(g_server->log_handler,"sendToPc , STATE_DISCONNECTED !!--- device = %d \n", device);
+		zlog_error(g_server->log_handler,"sendToPc , STATE_DISCONNECTED !!--- type = %d \n", type);
 		print_gettid(g_server->log_handler);
 		return 0 ;
 	}else if(g_receive == NULL){
-		zlog_error(g_server->log_handler,"sendToPc , g_receive == NULL !!!------ device = %d \n", device);
+		zlog_error(g_server->log_handler,"sendToPc , g_receive == NULL !!!------ type = %d \n", type);
 		print_gettid(g_server->log_handler);
 		return 0 ;
 	}
 
 	pthread_mutex_lock(g_server->para_t->mutex_);
 	if(g_server->send_enable == 0){
-		zlog_error(g_server->log_handler,"sendToPc , g_server->send_enable == 0 return ....\n");
+		zlog_error(g_server->log_handler,"sendToPc , g_server->send_enable == 0 return .... type = %d \n", type);
 		pthread_mutex_unlock(g_server->para_t->mutex_);		
 		return 0;
 	}
-
+	g_receive->point_1_send_cnt = g_receive->point_1_send_cnt + 1;
 	int ret = send(g_receive->connfd,send_buf,send_buf_len,0);
+	g_receive->point_2_send_cnt = g_receive->point_2_send_cnt + 1;
 	if(ret != send_buf_len){
+		int value = 0;
+		ioctl(g_receive->connfd, SIOCOUTQ, &value);
 		g_server->send_enable = 0;
 		if (errno == EWOULDBLOCK || errno == EAGAIN){
 			if(errno == EWOULDBLOCK)
-				zlog_error(g_receive->log_handler,"Error in client send socket:  timeout -- EWOULDBLOCK device = %d, \n", device);
+				zlog_error(g_receive->log_handler,"Error in client send socket:  timeout -- EWOULDBLOCK type = %d, \n", type);
 			if(errno == EAGAIN)
-				zlog_error(g_receive->log_handler,"Error in client send socket:  timeout -- EAGAIN device = %d, \n", device);
+				zlog_error(g_receive->log_handler,"Error in client send socket:  timeout -- EAGAIN type = %d, \n", type);
 			print_gettid(g_server->log_handler);
 			errno = 0;
+		}else{
+			zlog_error(g_receive->log_handler,"Error in client send socket: send length = %d , expected length = %d,", ret , send_buf_len);
+			zlog_error(g_receive->log_handler,"Error errno = %d , type = %d ", errno , type);
+			print_gettid(g_server->log_handler);
+		
+			zlog_info(g_receive->log_handler,"buf_json = %s\n",send_buf + 8);
 		}
-		zlog_error(g_receive->log_handler,"Error in client send socket: send length = %d , expected length = %d,", ret , send_buf_len);
-		print_gettid(g_server->log_handler);
+		zlog_info(g_receive->log_handler,"=+++++++++++++++++++++ value = %d\n",value);
+		//user_wait(g_receive);
 	}
 	g_receive->comp_send_cnt = g_receive->comp_send_cnt + 1;
 	pthread_mutex_unlock(g_server->para_t->mutex_);
@@ -348,8 +366,16 @@ int InitReceThread(g_receive_para** g_receive, g_msg_queue_para* g_msg_queue, in
 	(*g_receive)->rcv_cnt         = 0;
 	(*g_receive)->send_cnt        = 0;
 	(*g_receive)->comp_send_cnt   = 0;
+	(*g_receive)->point_1_send_cnt   = 0;
+	(*g_receive)->point_2_send_cnt   = 0;
 
 	gw_set_recv_timeout_mode(connfd);
+	gw_set_send_timeout_mode(connfd,handler);
+	gw_set_socket_buffer(connfd,handler);
+
+	int value = 0;
+	ioctl(connfd, SIOCOUTQ, &value);
+	zlog_info(handler," -------------------value = %d \n", value);
 
 	int ret = pthread_create((*g_receive)->para_t->thread_pid, NULL, receive_thread, (void*)(*g_receive));
     if(ret != 0){
@@ -358,6 +384,18 @@ int InitReceThread(g_receive_para** g_receive, g_msg_queue_para* g_msg_queue, in
     }	
 	return 0;
 }
+
+void mutex_reInit(g_server_para* g_server){
+	int ret = pthread_mutex_trylock(g_server->para_t->mutex_);
+	if (0 == ret) {
+		zlog_info(g_server->log_handler,"server mutex is unlock \n");
+		pthread_mutex_unlock(g_server->para_t->mutex_);
+	} else if(EBUSY == ret){
+		zlog_info(g_server->log_handler,"server mutex is locked in use \n"); 
+		pthread_mutex_unlock(g_server->para_t->mutex_);
+	}
+}
+
 
 void freeReceThread(g_server_para* g_server){
 	//g_server->waiting = STATE_DISCONNECTED;
@@ -392,6 +430,7 @@ void freeReceThread(g_server_para* g_server){
 	g_receive->disconnect_cnt = 0;
 	free(g_receive);
 	g_server->g_receive = NULL;
+	mutex_reInit(g_server);
 }
 
 void stopReceThread(g_server_para* g_server){ // only main thread call through event 

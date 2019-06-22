@@ -16,9 +16,5 @@ typedef struct g_RegDev_para{
 
 int initRegdev(g_RegDev_para** g_RegDev, zlog_category_t* handler);
 
-// 0x43c2010c,bit 7 enable constellation,bit6 enable csi , bit6 and bit7 not both enable
-int switchTocsi(g_RegDev_para* g_RegDev);
-int switchToconstellation(g_RegDev_para* g_RegDev);
-
 
 #endif//GW_CONTROL_H
