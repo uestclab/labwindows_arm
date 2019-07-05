@@ -5,42 +5,14 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <signal.h>
-#include "utility.h"
-#include "process.h"
 #include "zlog.h"
 
-#ifdef USE_STUB
-	#include "stub.h"
-#endif
-
-#ifndef USE_STUB
-	#include "csiLoopMain.h"
-	#include "procBroker.h"
-#endif
-
-
-/*---------------------------------------------------------------------------*/
-/*  main thread , receive socket thread , broker thread inform callback 	 */
-/*  receive -- | messageLength(4 Byte) | json file(messageLength) |          */
-/*  send    -- | messageLenght(4 Byte) | type(4 Byte) | payload   |          */
-/*  type : 1--rssi , 2--CSI , 3--json                                        */
-/*                                                                           */
-/*---------------------------------------------------------------------------*/
-
-/*---------------------------------------------------------------------------*/
-/*  change version : 1. 	//return ntohl(be32); return be32;               */
-/*---------------------------------------------------------------------------*/
-
-static void process_signal(int signal)
-{
-    switch(signal) {  
-		case SIGINT: 
-			receive_signal();
-			break;
-		default: 
-		    break;
-    }
-}
+#include "msg_queue.h"
+#include "event_process.h"
+#include "gw_timer.h"
+#include "procBroker.h"
+#include "dma_handler.h"
+#include "countDownLatch.h"
 
 
 zlog_category_t * serverLog(const char* path){
@@ -70,31 +42,70 @@ void closeServerLog(){
 	zlog_fini();
 }
 
+void c_compiler_builtin_macro(zlog_category_t* zlog_handler)
+{
+	zlog_info(zlog_handler,"gcc compiler ver:%s\n",__VERSION__);
+	zlog_info(zlog_handler,"this version built time is:[%s  %s]\n",__DATE__,__TIME__);
+	//printf("gcc compiler ver:%s\n",__VERSION__);
+	//printf("this version built time is:[%s  %s]\n",__DATE__,__TIME__);
+}
 
 int main(int argc,char** argv)
 {
 	zlog_category_t *zlog_handler = serverLog("/run/media/mmcblk1p1/etc/zlog_default.conf");
-	if( SIG_ERR == signal(SIGINT, process_signal) ){
-		
-	}
+	//zlog_category_t *zlog_handler = serverLog("./zlog_default.conf");
 
 	zlog_info(zlog_handler,"start devAdapter process\n");
-	int connfd = -1;
-#ifdef USE_STUB
-	printf("stubMain()\n");
-	stubMain(&connfd); // stub test
-#endif
-	int ret = initProcBroker(argv[0],&connfd,zlog_handler);
-	if(ret != 0){
-		zlog_info(zlog_handler,"initProcBroker fail ... end process\n");
-		closeServerLog();
+
+	c_compiler_builtin_macro(zlog_handler);
+
+	/* countDownLatch */
+	g_cntDown_para* g_cntDown = NULL;
+	int state = initCountDown(&g_cntDown, 1, zlog_handler);
+	
+	
+	/* msg_queue */
+	g_msg_queue_para* g_msg_queue = createMsgQueue(zlog_handler);
+	if(g_msg_queue == NULL){
+		zlog_info(zlog_handler,"No msg_queue created \n");
+		return 0;
+	}
+	zlog_info(zlog_handler, "g_msg_queue->msgid = %d \n", g_msg_queue->msgid);
+
+	/* timer thread */
+	g_timer_para* g_timer = NULL;
+	state = InitTimerThread(&g_timer, g_msg_queue, g_cntDown, zlog_handler);
+	if(state == -1 || g_timer == NULL){
+		zlog_info(zlog_handler,"No Timer created \n");
 		return 0;
 	}
 
-	ret = initNet(&connfd,zlog_handler);
+	/* server thread */
+	g_server_para* g_server = NULL;
+	state = InitServerThread(&g_server, g_msg_queue, g_cntDown, zlog_handler);
+	if(state == -1 || g_server == NULL){
+		zlog_info(zlog_handler,"No server thread created \n");
+		return 0;
+	}
+	
+	/* broker handler */
+	g_broker_para* g_broker = NULL;
+	state = initProcBroker(argv[0], &g_broker, g_server, zlog_handler);
+	if(state != 0 || g_server == NULL){
+		zlog_info(zlog_handler,"No Broker created \n");
+		return 0;
+	}
 
-	destoryProcBroker();
-	zlog_info(zlog_handler,"devAdapter end main\n");
+	/* dma_handler */
+	g_dma_para* g_dma = NULL;
+	state = init_dma_state(&g_dma, g_server, g_msg_queue, zlog_handler);
+	if(state != 0 || g_dma == NULL){
+		zlog_info(zlog_handler,"No init_dma_state created \n");
+		return 0;
+	}
+
+	eventLoop(g_server, g_msg_queue, g_timer, g_broker, g_dma, zlog_handler);
+
 	closeServerLog();
     return 0;
 }

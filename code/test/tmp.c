@@ -1,174 +1,86 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <string.h>
-#include <math.h>
+ 
+int checkIQ(char input){
+	if(input < 0)
+		return 1;
+	else
+		return 0;
+}
 
-
-unsigned int stringToInt(char* ret){
-	if(ret == NULL){
-		return -1;
-	}
-	int i;
-	int len = strlen(ret);
-	if(len < 3)
-		return -1;
-	if(ret[0] != '0' || ret[1] != 'x')
-		return -1;
-	unsigned int number = 0;
-	int flag = 0;
-	for(i=2;i<len;i++){
-		if(ret[i] == '0' && flag == 0)
-			continue;
-		flag = 1;
-		int temp = 0;
-		if(ret[i]>='0'&&ret[i]<='9')
-			temp = ret[i] - '0';
-		else if(ret[i]>='a'&&ret[i]<='f')
-			temp = ret[i] - 'a' + 10;
-		else if(ret[i]>='A'&&ret[i]<='F')
-			temp = ret[i] - 'A' + 10;
-		if(i == len - 1)
-			number = number + temp;
-		else
-			number = (number + temp)*16;
-	}
-	return number;
+void shiftIQ(char* input){
+	*input = (*input) << 1;
 }
 
 
-double calculateFreq(char* ret){ // 0x04FF04FF , 0x04FF0400 , 0x04000400
-	int freq_offset_i = 0, freq_offset_q =0, freq_offset_i_pre=0, freq_offset_q_pre=0;
-
-	unsigned int number = stringToInt(ret);
-
-	freq_offset_q_pre = number - ((number>>8) << 8);
-	number = number >> 8;
-	freq_offset_i_pre = number - ((number>>8) << 8);
-	number = number >> 8;
-	freq_offset_q = number - ((number>>8) << 8);
-	number = number >> 8;
-	freq_offset_i = number - ((number>>8) << 8);
-
-	printf("calculateFreq--------- : freq_offset_i = %d , freq_offset_q = %d , freq_offset_i_pre = %d , freq_offset_q_pre = %d \n",
-		freq_offset_i, freq_offset_q , freq_offset_i_pre , freq_offset_q_pre);
-
-	if(freq_offset_i > 127)
-		freq_offset_i = freq_offset_i - 256;
-
-	if(freq_offset_q > 127)
-		freq_offset_q = freq_offset_q - 256;
-
-	if(freq_offset_i_pre > 127)
-		freq_offset_i_pre = freq_offset_i_pre - 256;
-
-	if(freq_offset_q_pre > 127)
-		freq_offset_q_pre = freq_offset_q_pre - 256;
-
-	printf("calculateFreq : freq_offset_i = %d , freq_offset_q = %d , freq_offset_i_pre = %d , freq_offset_q_pre = %d \n",
-			freq_offset_i, freq_offset_q , freq_offset_i_pre , freq_offset_q_pre);
-
-	double temp_1 = atan((freq_offset_q * 1.0)/(freq_offset_i * 1.0));
-	double temp_2 = atan((freq_offset_q_pre * 1.0)/(freq_offset_i_pre * 1.0));
-	double diff = temp_1 - temp_2;
-	double result = (diff / 5529.203) * 1000000000;
-	return result;
-	
-	//freq = (atan(freq_offset_q/freq_offset_i)-atan(freq_offset_q_pre/freq_offset_i_pre))/(2*PI*55*2*10-9*8)  (Hz)
-}
-
-
-double calculateFreq_old(char* ret){ // 0x04FF04FF , 0x04FF0400 , 0x04000400
-	int freq_offset_i = 0, freq_offset_q =0, freq_offset_i_pre=0, freq_offset_q_pre=0;
-
-	char temp[5];
-	temp[0] = '0'; temp[1] = 'x'; temp[4] = '\0';
-	int index = 2;
-	
-	temp[2] = ret[index] ; index = index + 1;
-	temp[3] = ret[index] ; index = index + 1;
-	freq_offset_i = stringToInt(temp);
-	printf("str = %s , freq_offset_i = %d  \n" , temp,freq_offset_i);
-
-	temp[2] = ret[index] ; index = index + 1;
-	temp[3] = ret[index] ; index = index + 1;
-	freq_offset_q = stringToInt(temp);
-	printf("str = %s , freq_offset_q = %d  \n" , temp,freq_offset_q);
-
-	temp[2] = ret[index] ; index = index + 1;
-	temp[3] = ret[index] ; index = index + 1;
-	freq_offset_i_pre = stringToInt(temp);
-	printf("str = %s , freq_offset_i_pre = %d  \n" , temp,freq_offset_i_pre);
-
-	temp[2] = ret[index] ; index = index + 1;
-	temp[3] = ret[index] ; index = index + 1;
-	freq_offset_q_pre = stringToInt(temp);
-	printf("str = %s , freq_offset_q_pre = %d  \n" , temp,freq_offset_q_pre);
-
-	printf("calculateFreq_old ------- : freq_offset_i = %d , freq_offset_q = %d , freq_offset_i_pre = %d , freq_offset_q_pre = %d \n",
-		freq_offset_i, freq_offset_q , freq_offset_i_pre , freq_offset_q_pre);
-
-	if(freq_offset_i_pre > 127)
-		freq_offset_i_pre = freq_offset_i_pre - 256;
-
-	if(freq_offset_q > 127)
-		freq_offset_q = freq_offset_q - 256;
-
-	if(freq_offset_i > 127)
-		freq_offset_i = freq_offset_i - 256;
-
-	if(freq_offset_q_pre > 127)
-		freq_offset_q_pre = freq_offset_q_pre - 256;
-
-	printf("calculateFreq_old : freq_offset_i = %d , freq_offset_q = %d , freq_offset_i_pre = %d , freq_offset_q_pre = %d \n",
-		freq_offset_i, freq_offset_q , freq_offset_i_pre , freq_offset_q_pre);
-	double temp_1 = atan((freq_offset_q * 1.0)/(freq_offset_i * 1.0));
-	double temp_2 = atan((freq_offset_q_pre * 1.0)/(freq_offset_i_pre * 1.0));
-	double diff = temp_1 - temp_2;
-	double result = (diff / 5529.203) * 1000000000;
-	return result;
-	
-	//freq = (atan(freq_offset_q/freq_offset_i)-atan(freq_offset_q_pre/freq_offset_i_pre))/(2*PI*55*2*10-9*8)  (Hz)
-}
-
-
-
-
-
-int main()
+#define LENGTH_COMPLEX 16
+void test(void)
 {
-	char* temp = "0x11c02cce";
-	printf("temp = %s , result = %f , old = %f  \n", temp , calculateFreq(temp) , calculateFreq_old(temp));
+	int i,j=0;
+	int sw_temp = 0;
+    double*      vectReal = (double*)malloc(LENGTH_COMPLEX*sizeof(double));
+    double*      vectImag = (double*)malloc(LENGTH_COMPLEX*sizeof(double));
+	char tmp_str[32] = {
+			0x3c,0xeb,0x13,0xeb,0xea,0xeb,0x14,0xeb,
+			0x3d,0x3c,0x3d,0xc2,0x14,0x3d,0xea,0x14,
+			0x3d,0xc2,0x14,0x14,0x3d,0x14,0xeb,0xc1,
+			0xeb,0x14,0xeb,0xea,0xc1,0x14,0xea,0xc2};
+	for(i=0;i<32;i++){
+		printf("before tmp_str = 0x%x \n", tmp_str[i]);
+		tmp_str[i] = (tmp_str[i] >> 1);
+		printf("after shift tmp_str = 0x%x \n", tmp_str[i]);
+		if(sw_temp == 0){
+			if(checkIQ(tmp_str[i]) == 0)
+				tmp_str[i] = tmp_str[i] + 0x80;
+			sw_temp = 1;
+		}else if(sw_temp == 1){
+			if(checkIQ(tmp_str[i]) == 1)
+				tmp_str[i] = tmp_str[i] - 0x80;
+			sw_temp = 0;
+		}
+		printf("modify --- tmp_str[%d] = 0x%x \n",i,tmp_str[i]);
+	}
 
+	char shift_str[32];
+	memcpy(shift_str,tmp_str,32);
 
+	sw_temp = 0;
+	int cnt_stream = 0;
+	for(i=0;i<32;i++){
+		if(checkIQ(tmp_str[i]) == 1)
+			printf("tmp_str[%d] = 0x%x is I data \n", i,tmp_str[i]);
+		else
+			printf("tmp_str[%d] = 0x%x is Q data \n", i,tmp_str[i]);
+		shiftIQ(&shift_str[i]);
+		unsigned short tmp = (unsigned short)(shift_str[i]);
+		int value_i = tmp;
+		if(value_i > 32767)
+			value_i = value_i - 65536;
+		printf("tmp_str[%d] = 0x%x , value_i = %d , shift_str[%d] = 0x%x \n",i,tmp_str[i],value_i,i,shift_str[i]);
+		if(sw_temp == 0){
+			vectReal[j] = value_i;
+			sw_temp = 1;
+			cnt_stream = cnt_stream + 1;
+		}else if(sw_temp == 1){
+			vectImag[j] = value_i;
+			sw_temp = 0;
+			j = j + 1;
+			cnt_stream = cnt_stream + 1;
+		}
+	}
+	
+	for(i=0;i<16;i++){
+		printf("vectReal[%d] = %f , vectImag[%d] = %f \n",i,vectReal[i],i,vectImag[i]);
+	}
+	
+}
+ 
+int main(void)
+{
+	test();
+	int value = 0x3<<5;
+	printf("value = 0x%x\n",value);
 	return 0;
 }
-
-/*
-
-ret = 0x13bf2acc
-freq_offset = -71444.117500 
-ret = 0x13bf29cc
-freq_offset = -69319.359770 
-ret = 0xcbd26ca
-freq_offset = -78850.779023 
-ret = 0xebf27cb
-freq_offset = -76365.267738 
-ret = 0x12bf2acd
-freq_offset = -75738.074457 
-ret = 0x11c02cce
-freq_offset = -83560.907685 
-ret = 0x12bf29cc
-freq_offset = -71893.252768 
-ret = 0x15c02acd
-freq_offset = -67255.377494 
-ret = 0xebd27ca
-freq_offset = -75868.747008 
-ret = 0x12be29cc
-freq_offset = -72598.806635 
-*/
-
-
-
-
 

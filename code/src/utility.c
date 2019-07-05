@@ -29,6 +29,7 @@ void destoryThreadPara(para_thread* para_t){
     free(para_t->cond_);
     free(para_t->mutex_);
     free(para_t->thread_pid);
+	para_t = NULL;
 }
 
 
@@ -119,7 +120,7 @@ int connect_check(char* eth)
 	char statue[20];
 	
 	if(strcmp(eth,"eth0") == 0)
-		net_fd=open("/sys/class/net/eth0/operstate",O_RDONLY);
+		net_fd=open("/sys/class/net/eth0/operstate",O_RDONLY); // O_RDWR 
 	else if(strcmp(eth,"eth1") == 0)
 		net_fd=open("/sys/class/net/eth1/operstate",O_RDONLY);
 	if(net_fd<0)
@@ -140,28 +141,3 @@ int connect_check(char* eth)
 }
 
 
-void user_wait()
-{
-	int c;
-	printf("user_wait... ");
-	do
-	{
-		c = getchar();
-		if(c == 'g') break;
-	} while(c != '\n');
-}
-
-void delay(){
-	int i = 0,j = 0;
-	for(i = 0;i<50;i++){
-		for(j=0;j<50;j++){
-			int x = 0;
-		}
-	}
-}
-
-void stop(){
-	while(1){
-		;
-	}
-}
