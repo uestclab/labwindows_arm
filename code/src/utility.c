@@ -140,4 +140,31 @@ int connect_check(char* eth)
 	}
 }
 
+int gpio_read(int pin)
+{  
+    char path[64];  
+
+    char value_str[3];  
+
+    int fd;  
+
+  
+	/* /sys/class/gpio/gpio973/value */
+    snprintf(path, sizeof(path), "/sys/class/gpio/gpio%d/value", pin);  
+
+    fd = open(path, O_RDONLY);  
+
+    if (fd < 0){
+        printf("Failed to open gpio value for reading!\n");
+        return -1;
+    }  
+
+    if (read(fd, value_str, 3) < 0){
+        printf("Failed to read value!\n");
+        return -1;
+    }
+    close(fd);
+    return (atoi(value_str));
+}
+
 

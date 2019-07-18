@@ -29,7 +29,7 @@ int64_t now();
 
 char *get_prog_name(char *argv);
 int connect_check(char* eth);
-
+int gpio_read(int pin);
 
 
 #endif//UTILITY_H

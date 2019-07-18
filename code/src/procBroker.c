@@ -16,10 +16,6 @@
 typedef int (*log_print)(const char *format,...);
 void dev_set_log(log_print log_func);
 
-int my_zlog(const char *format,...){
- 	;
-}
-
 g_broker_para* g_broker_temp = NULL;
 
 void sendStateInquiry(g_server_para* g_server, char* stat_buf, int stat_buf_len, int type){
@@ -410,7 +406,17 @@ int inquiry_rf_and_mf(g_broker_para* g_broker){
 	return 0;
 }
 
-
+int response_dac_state(g_broker_para* g_broker){
+	int value = gpio_read(973);
+	char dac_str[2];
+	dac_str[1] = '\0';
+	if(value == 0)
+		dac_str[0] = '0';
+	else if(value == 1)
+		dac_str[0] = '1';
+	sendStateInquiry(g_broker->g_server,dac_str,2,61);
+	return 0;
+}
 
 
 

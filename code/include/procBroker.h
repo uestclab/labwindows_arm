@@ -39,5 +39,6 @@ void close_rssi(g_broker_para* g_broker);
 void freeProcBroker(g_broker_para* g_broker);
 
 int inquiry_rf_and_mf(g_broker_para* g_broker);
+int response_dac_state(g_broker_para* g_broker);
 
 #endif//PROCBROKER_H

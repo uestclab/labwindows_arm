@@ -21,7 +21,7 @@ void display(g_server_para* g_server){
 	zlog_info(g_server->log_handler," g_receive->point_2_send_cnt = %u ", g_server->g_receive->point_2_send_cnt);
 
 	int value = 0;
-	ioctl(g_server->g_receive->connfd, SIOCOUTQ, &value); //TCP socket發送隊列裡頭還沒有發送出去的數據有多少
+	ioctl(g_server->g_receive->connfd, SIOCOUTQ, &value); // remaining data in tcp send queue 
 	zlog_info(g_server->log_handler," -------------------value = %d \n", value);
 
 	zlog_info(g_server->log_handler,"  ---------------- end display () ----------------------\n");
@@ -67,7 +67,9 @@ void eventLoop(g_server_para* g_server, g_msg_queue_para* g_msg_queue, g_timer_p
 			{
 				zlog_info(zlog_handler," ---------------- EVENT : MSG_INQUIRY_STATE: msg_number = %d",getData->msg_number);
 
-				inquiry_state_from(getData->msg_json,getData->msg_len,g_broker);				
+				inquiry_state_from(getData->msg_json,getData->msg_len,g_broker);
+
+				response_dac_state(g_broker); // dac state 				
 				
 				break;
 			}
